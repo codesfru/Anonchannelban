@@ -81,7 +81,7 @@ func main() {
 	}
 
 	// log msg telling that bot has started
-	fmt.Printf("%s has been started...!\nMade with ❤️ by @DivideProjects\n", b.User.Username)
+	fmt.Printf("%s has been started...!\nMade with ❤️‍🔥 by @codesfru\n", b.User.Username)
 
 	// Idle, to keep updates coming in, and avoid bot stopping.
 	updater.Idle()
@@ -105,8 +105,8 @@ func start(bot *gotgbot.Bot, ctx *ext.Context) error {
 			"Send /help for getting info on how on use me!\n"+
 			"Also you can send /source to get my source code to know how i'm built ;) and make sure to give a star to it; that makes my Devs to work more on O.S. projects like me :)\n\n"+
 			"Hope you liked it !\n"+
-			"Brought to You with ❤️ By @DivideProjects\n"+
-			"Head towards @DivideProjectsDiscussion for any queries!",
+			"easier code for you By @codesfru\n"+
+			"Head towards @Divinefru Discussion for any queries dev @livefru !",
 		user.FirstName, bot.FirstName,
 	)
 
@@ -172,7 +172,7 @@ func source(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	text = fmt.Sprintf(
 		"You can find my source code by <a href=\"%s\">here</a> or by clicking the button below.",
-		"https://github.com/DivideProjects/RestrictChannelRobot",
+		"https://github.com/codesfru/Anonchannelban",
 	)
 
 	_, err := msg.Reply(
@@ -186,7 +186,7 @@ func source(bot *gotgbot.Bot, ctx *ext.Context) error {
 					{
 						{
 							Text: "Source Code",
-							Url:  "https://github.com/DivideProjects/RestrictChannelRobot",
+							Url:  "https://github.com/codesfru/Anonchannelban",
 						},
 					},
 				},
