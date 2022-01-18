@@ -1,6 +1,6 @@
 {
-  "name": "Restrict Channel Robot",
-  "description": "A simple Golang based telegram bot to ban anonymous users in your chat.",
+  "name": "ACB ROBO",
+  "description": "Codesfru anon channel users ban bot.",
   "keywords": [
     "telegram",
     "telegram-bot",
@@ -11,12 +11,12 @@
     "telegram anonymous channel",
     "telegram group"
   ],
-  "repository": "https://github.com/DivideProjects/RestrictChannelRobot",
-  "website": "https://t.me/DivideProjects",
-  "success_url": "https://t.me/DivideProjects",
+  "repository": "https://github.com/codesfru/Anonchannelban",
+  "website": "https://t.me/codesfru",
+  "success_url": "https://t.me/codesfru",
   "env": {
     "BOT_TOKEN": {
-      "description": "Bot Token, Get It From @BotFather.",
+      "description": "simple to deploy just put your bot token via geting from @botfather .",
       "value": "",
       "required": true
     }
