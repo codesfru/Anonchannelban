@@ -16,13 +16,15 @@ import (
 type AddStickerToSetOpts struct {
 	// PNG image with the sticker, must be up to 512 kilobytes in size, dimensions must not exceed 512px, and either width or height must be exactly 512px. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
 	PngSticker InputFile
-	// TGS animation with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/animated_stickers#technical-requirements for technical requirements
+	// TGS animation with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/stickers#animated-sticker-requirements for technical requirements
 	TgsSticker InputFile
+	// WEBM video with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/stickers#video-sticker-requirements for technical requirements
+	WebmSticker InputFile
 	// A JSON-serialized object for position where the mask should be placed on faces
 	MaskPosition MaskPosition
 }
 
-// AddStickerToSet Use this method to add a new sticker to a set created by the bot. You must use exactly one of the fields png_sticker or tgs_sticker. Animated stickers can be added to animated sticker sets and only to them. Animated sticker sets can have up to 50 stickers. Static sticker sets can have up to 120 stickers. Returns True on success.
+// AddStickerToSet Use this method to add a new sticker to a set created by the bot. You must use exactly one of the fields png_sticker, tgs_sticker, or webm_sticker. Animated stickers can be added to animated sticker sets and only to them. Animated sticker sets can have up to 50 stickers. Static sticker sets can have up to 120 stickers. Returns True on success.
 // - user_id (type int64): User identifier of sticker set owner
 // - name (type string): Sticker set name
 // - emojis (type string): One or more emoji corresponding to the sticker
@@ -72,6 +74,24 @@ func (bot *Bot) AddStickerToSet(userId int64, name string, emojis string, opts *
 
 			default:
 				return false, fmt.Errorf("unknown type for InputFile: %T", opts.TgsSticker)
+			}
+		}
+		if opts.WebmSticker != nil {
+			switch m := opts.WebmSticker.(type) {
+			case NamedReader:
+				v.Add("webm_sticker", "attach://webm_sticker")
+				data["webm_sticker"] = m
+
+			case io.Reader:
+				v.Add("webm_sticker", "attach://webm_sticker")
+				data["webm_sticker"] = NamedFile{File: m}
+
+			case []byte:
+				v.Add("webm_sticker", "attach://webm_sticker")
+				data["webm_sticker"] = NamedFile{File: bytes.NewReader(m)}
+
+			default:
+				return false, fmt.Errorf("unknown type for InputFile: %T", opts.WebmSticker)
 			}
 		}
 		bs, err := json.Marshal(opts.MaskPosition)
@@ -141,7 +161,8 @@ type AnswerInlineQueryOpts struct {
 	SwitchPmParameter string
 }
 
-// AnswerInlineQuery Use this method to send answers to an inline query. On success, True is returned.No more than 50 results per query are allowed.
+// AnswerInlineQuery Use this method to send answers to an inline query. On success, True is returned.
+// No more than 50 results per query are allowed.
 // - inline_query_id (type string): Unique identifier for the answered query
 // - results (type []InlineQueryResult): A JSON-serialized array of results for the inline query
 // - opts (type AnswerInlineQueryOpts): All optional parameters.
@@ -238,6 +259,28 @@ func (bot *Bot) AnswerShippingQuery(shippingQueryId string, ok bool, opts *Answe
 
 	var b bool
 	return b, json.Unmarshal(r, &b)
+}
+
+// AnswerWebAppQuery Use this method to set the result of an interaction with a Web App and send a corresponding message on behalf of the user to the chat from which the query originated. On success, a SentWebAppMessage object is returned.
+// - web_app_query_id (type string): Unique identifier for the query to be answered
+// - result (type InlineQueryResult): A JSON-serialized object describing the message to be sent
+// https://core.telegram.org/bots/api#answerwebappquery
+func (bot *Bot) AnswerWebAppQuery(webAppQueryId string, result InlineQueryResult) (*SentWebAppMessage, error) {
+	v := urlLib.Values{}
+	v.Add("web_app_query_id", webAppQueryId)
+	bs, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal field result: %w", err)
+	}
+	v.Add("result", string(bs))
+
+	r, err := bot.Get("answerWebAppQuery", v)
+	if err != nil {
+		return nil, err
+	}
+
+	var s SentWebAppMessage
+	return &s, json.Unmarshal(r, &s)
 }
 
 // ApproveChatJoinRequest Use this method to approve a chat join request. The bot must be an administrator in the chat for this to work and must have the can_invite_users administrator right. Returns True on success.
@@ -431,17 +474,19 @@ func (bot *Bot) CreateChatInviteLink(chatId int64, opts *CreateChatInviteLinkOpt
 type CreateNewStickerSetOpts struct {
 	// PNG image with the sticker, must be up to 512 kilobytes in size, dimensions must not exceed 512px, and either width or height must be exactly 512px. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
 	PngSticker InputFile
-	// TGS animation with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/animated_stickers#technical-requirements for technical requirements
+	// TGS animation with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/stickers#animated-sticker-requirements for technical requirements
 	TgsSticker InputFile
+	// WEBM video with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/stickers#video-sticker-requirements for technical requirements
+	WebmSticker InputFile
 	// Pass True, if a set of mask stickers should be created
 	ContainsMasks bool
 	// A JSON-serialized object for position where the mask should be placed on faces
 	MaskPosition MaskPosition
 }
 
-// CreateNewStickerSet Use this method to create a new sticker set owned by a user. The bot will be able to edit the sticker set thus created. You must use exactly one of the fields png_sticker or tgs_sticker. Returns True on success.
+// CreateNewStickerSet Use this method to create a new sticker set owned by a user. The bot will be able to edit the sticker set thus created. You must use exactly one of the fields png_sticker, tgs_sticker, or webm_sticker. Returns True on success.
 // - user_id (type int64): User identifier of created sticker set owner
-// - name (type string): Short name of sticker set, to be used in t.me/addstickers/ URLs (e.g., animals). Can contain only english letters, digits and underscores. Must begin with a letter, can't contain consecutive underscores and must end in "_by_<bot username>". <bot_username> is case insensitive. 1-64 characters.
+// - name (type string): Short name of sticker set, to be used in t.me/addstickers/ URLs (e.g., animals). Can contain only english letters, digits and underscores. Must begin with a letter, can't contain consecutive underscores and must end in "_by_<bot_username>". <bot_username> is case insensitive. 1-64 characters.
 // - title (type string): Sticker set title, 1-64 characters
 // - emojis (type string): One or more emoji corresponding to the sticker
 // - opts (type CreateNewStickerSetOpts): All optional parameters.
@@ -491,6 +536,24 @@ func (bot *Bot) CreateNewStickerSet(userId int64, name string, title string, emo
 
 			default:
 				return false, fmt.Errorf("unknown type for InputFile: %T", opts.TgsSticker)
+			}
+		}
+		if opts.WebmSticker != nil {
+			switch m := opts.WebmSticker.(type) {
+			case NamedReader:
+				v.Add("webm_sticker", "attach://webm_sticker")
+				data["webm_sticker"] = m
+
+			case io.Reader:
+				v.Add("webm_sticker", "attach://webm_sticker")
+				data["webm_sticker"] = NamedFile{File: m}
+
+			case []byte:
+				v.Add("webm_sticker", "attach://webm_sticker")
+				data["webm_sticker"] = NamedFile{File: bytes.NewReader(m)}
+
+			default:
+				return false, fmt.Errorf("unknown type for InputFile: %T", opts.WebmSticker)
 			}
 		}
 		v.Add("contains_masks", strconv.FormatBool(opts.ContainsMasks))
@@ -560,7 +623,15 @@ func (bot *Bot) DeleteChatStickerSet(chatId int64) (bool, error) {
 	return b, json.Unmarshal(r, &b)
 }
 
-// DeleteMessage Use this method to delete a message, including service messages, with the following limitations:- A message can only be deleted if it was sent less than 48 hours ago.- A dice message in a private chat can only be deleted if it was sent more than 24 hours ago.- Bots can delete outgoing messages in private chats, groups, and supergroups.- Bots can delete incoming messages in private chats.- Bots granted can_post_messages permissions can delete outgoing messages in channels.- If the bot is an administrator of a group, it can delete any message there.- If the bot has can_delete_messages permission in a supergroup or a channel, it can delete any message there.Returns True on success.
+// DeleteMessage Use this method to delete a message, including service messages, with the following limitations:
+// - A message can only be deleted if it was sent less than 48 hours ago.
+// - A dice message in a private chat can only be deleted if it was sent more than 24 hours ago.
+// - Bots can delete outgoing messages in private chats, groups, and supergroups.
+// - Bots can delete incoming messages in private chats.
+// - Bots granted can_post_messages permissions can delete outgoing messages in channels.
+// - If the bot is an administrator of a group, it can delete any message there.
+// - If the bot has can_delete_messages permission in a supergroup or a channel, it can delete any message there.
+// Returns True on success.
 // - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - message_id (type int64): Identifier of the message to delete
 // https://core.telegram.org/bots/api#deletemessage
@@ -1106,6 +1177,31 @@ func (bot *Bot) GetChatMemberCount(chatId int64) (int64, error) {
 	return i, json.Unmarshal(r, &i)
 }
 
+// GetChatMenuButtonOpts is the set of optional fields for Bot.GetChatMenuButton.
+type GetChatMenuButtonOpts struct {
+	// Unique identifier for the target private chat. If not specified, default bot's menu button will be returned
+	ChatId int64
+}
+
+// GetChatMenuButton Use this method to get the current value of the bot's menu button in a private chat, or the default menu button. Returns MenuButton on success.
+// - opts (type GetChatMenuButtonOpts): All optional parameters.
+// https://core.telegram.org/bots/api#getchatmenubutton
+func (bot *Bot) GetChatMenuButton(opts *GetChatMenuButtonOpts) (MenuButton, error) {
+	v := urlLib.Values{}
+	if opts != nil {
+		if opts.ChatId != 0 {
+			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+		}
+	}
+
+	r, err := bot.Get("getChatMenuButton", v)
+	if err != nil {
+		return nil, err
+	}
+
+	return unmarshalMenuButton(r)
+}
+
 // GetFile Use this method to get basic info about a file and prepare it for downloading. For the moment, bots can download files of up to 20MB in size. On success, a File object is returned. The file can then be downloaded via the link https://api.telegram.org/file/bot<token>/<file_path>, where <file_path> is taken from the response. It is guaranteed that the link will be valid for at least 1 hour. When the link expires, a new one can be requested by calling getFile again.
 // Note: This function may not preserve the original file name and MIME type. You should save the file's MIME type and name (if available) when the File object is received.
 // - file_id (type string): File identifier to get info about
@@ -1202,6 +1298,30 @@ func (bot *Bot) GetMyCommands(opts *GetMyCommandsOpts) ([]BotCommand, error) {
 
 	var b []BotCommand
 	return b, json.Unmarshal(r, &b)
+}
+
+// GetMyDefaultAdministratorRightsOpts is the set of optional fields for Bot.GetMyDefaultAdministratorRights.
+type GetMyDefaultAdministratorRightsOpts struct {
+	// Pass True to get default administrator rights of the bot in channels. Otherwise, default administrator rights of the bot for groups and supergroups will be returned.
+	ForChannels bool
+}
+
+// GetMyDefaultAdministratorRights Use this method to get the current default administrator rights of the bot. Returns ChatAdministratorRights on success.
+// - opts (type GetMyDefaultAdministratorRightsOpts): All optional parameters.
+// https://core.telegram.org/bots/api#getmydefaultadministratorrights
+func (bot *Bot) GetMyDefaultAdministratorRights(opts *GetMyDefaultAdministratorRightsOpts) (*ChatAdministratorRights, error) {
+	v := urlLib.Values{}
+	if opts != nil {
+		v.Add("for_channels", strconv.FormatBool(opts.ForChannels))
+	}
+
+	r, err := bot.Get("getMyDefaultAdministratorRights", v)
+	if err != nil {
+		return nil, err
+	}
+
+	var c ChatAdministratorRights
+	return &c, json.Unmarshal(r, &c)
 }
 
 // GetStickerSet Use this method to get a sticker set. On success, a StickerSet object is returned.
@@ -1382,8 +1502,8 @@ type PromoteChatMemberOpts struct {
 	CanEditMessages bool
 	// Pass True, if the administrator can delete messages of other users
 	CanDeleteMessages bool
-	// Pass True, if the administrator can manage voice chats
-	CanManageVoiceChats bool
+	// Pass True, if the administrator can manage video chats
+	CanManageVideoChats bool
 	// Pass True, if the administrator can restrict, ban or unban chat members
 	CanRestrictMembers bool
 	// Pass True, if the administrator can add new administrators with a subset of their own privileges or demote administrators that he has promoted, directly or indirectly (promoted by administrators that were appointed by him)
@@ -1411,7 +1531,7 @@ func (bot *Bot) PromoteChatMember(chatId int64, userId int64, opts *PromoteChatM
 		v.Add("can_post_messages", strconv.FormatBool(opts.CanPostMessages))
 		v.Add("can_edit_messages", strconv.FormatBool(opts.CanEditMessages))
 		v.Add("can_delete_messages", strconv.FormatBool(opts.CanDeleteMessages))
-		v.Add("can_manage_voice_chats", strconv.FormatBool(opts.CanManageVoiceChats))
+		v.Add("can_manage_video_chats", strconv.FormatBool(opts.CanManageVideoChats))
 		v.Add("can_restrict_members", strconv.FormatBool(opts.CanRestrictMembers))
 		v.Add("can_promote_members", strconv.FormatBool(opts.CanPromoteMembers))
 		v.Add("can_change_info", strconv.FormatBool(opts.CanChangeInfo))
@@ -2258,7 +2378,7 @@ type SendMessageOpts struct {
 	DisableWebPagePreview bool
 	// Sends the message silently. Users will receive a notification with no sound.
 	DisableNotification bool
-	// Protects the contents of sent messages from forwarding and saving
+	// Protects the contents of the sent message from forwarding and saving
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
@@ -2450,7 +2570,8 @@ func (bot *Bot) SendPoll(chatId int64, question string, options []string, opts *
 		v.Add("is_anonymous", strconv.FormatBool(opts.IsAnonymous))
 		v.Add("type", opts.Type)
 		v.Add("allows_multiple_answers", strconv.FormatBool(opts.AllowsMultipleAnswers))
-		if opts.CorrectOptionId != 0 {
+		if opts.Type == "quiz" {
+			// correct_option_id should always be set when the type is "quiz" - it doesnt need to be set for type "regular".
 			v.Add("correct_option_id", strconv.FormatInt(opts.CorrectOptionId, 10))
 		}
 		v.Add("explanation", opts.Explanation)
@@ -2507,7 +2628,7 @@ type SendStickerOpts struct {
 	ReplyMarkup ReplyMarkup
 }
 
-// SendSticker Use this method to send static .WEBP or animated .TGS stickers. On success, the sent Message is returned.
+// SendSticker Use this method to send static .WEBP, animated .TGS, or video .WEBM stickers. On success, the sent Message is returned.
 // - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - sticker (type InputFile): Sticker to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a .WEBP file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
 // - opts (type SendStickerOpts): All optional parameters.
@@ -2990,6 +3111,39 @@ func (bot *Bot) SetChatDescription(chatId int64, opts *SetChatDescriptionOpts) (
 	return b, json.Unmarshal(r, &b)
 }
 
+// SetChatMenuButtonOpts is the set of optional fields for Bot.SetChatMenuButton.
+type SetChatMenuButtonOpts struct {
+	// Unique identifier for the target private chat. If not specified, default bot's menu button will be changed
+	ChatId int64
+	// A JSON-serialized object for the new bot's menu button. Defaults to MenuButtonDefault
+	MenuButton MenuButton
+}
+
+// SetChatMenuButton Use this method to change the bot's menu button in a private chat, or the default menu button. Returns True on success.
+// - opts (type SetChatMenuButtonOpts): All optional parameters.
+// https://core.telegram.org/bots/api#setchatmenubutton
+func (bot *Bot) SetChatMenuButton(opts *SetChatMenuButtonOpts) (bool, error) {
+	v := urlLib.Values{}
+	if opts != nil {
+		if opts.ChatId != 0 {
+			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+		}
+		bs, err := json.Marshal(opts.MenuButton)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal field menu_button: %w", err)
+		}
+		v.Add("menu_button", string(bs))
+	}
+
+	r, err := bot.Get("setChatMenuButton", v)
+	if err != nil {
+		return false, err
+	}
+
+	var b bool
+	return b, json.Unmarshal(r, &b)
+}
+
 // SetChatPermissions Use this method to set default chat permissions for all members. The bot must be an administrator in the group or a supergroup for this to work and must have the can_restrict_members administrator rights. Returns True on success.
 // - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
 // - permissions (type ChatPermissions): A JSON-serialized object for new default chat permissions
@@ -3175,6 +3329,37 @@ func (bot *Bot) SetMyCommands(commands []BotCommand, opts *SetMyCommandsOpts) (b
 	return b, json.Unmarshal(r, &b)
 }
 
+// SetMyDefaultAdministratorRightsOpts is the set of optional fields for Bot.SetMyDefaultAdministratorRights.
+type SetMyDefaultAdministratorRightsOpts struct {
+	// A JSON-serialized object describing new default administrator rights. If not specified, the default administrator rights will be cleared.
+	Rights ChatAdministratorRights
+	// Pass True to change the default administrator rights of the bot in channels. Otherwise, the default administrator rights of the bot for groups and supergroups will be changed.
+	ForChannels bool
+}
+
+// SetMyDefaultAdministratorRights Use this method to change the default administrator rights requested by the bot when it's added as an administrator to groups or channels. These rights will be suggested to users, but they are are free to modify the list before adding the bot. Returns True on success.
+// - opts (type SetMyDefaultAdministratorRightsOpts): All optional parameters.
+// https://core.telegram.org/bots/api#setmydefaultadministratorrights
+func (bot *Bot) SetMyDefaultAdministratorRights(opts *SetMyDefaultAdministratorRightsOpts) (bool, error) {
+	v := urlLib.Values{}
+	if opts != nil {
+		bs, err := json.Marshal(opts.Rights)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal field rights: %w", err)
+		}
+		v.Add("rights", string(bs))
+		v.Add("for_channels", strconv.FormatBool(opts.ForChannels))
+	}
+
+	r, err := bot.Get("setMyDefaultAdministratorRights", v)
+	if err != nil {
+		return false, err
+	}
+
+	var b bool
+	return b, json.Unmarshal(r, &b)
+}
+
 // SetPassportDataErrors Informs a user that some of the Telegram Passport elements they provided contains errors. The user will not be able to re-submit their Passport to you until the errors are fixed (the contents of the field for which you returned the error must change). Returns True on success.
 // Use this if the data submitted by the user doesn't satisfy the standards your service requires for any reason. For example, if a birthday date seems invalid, a submitted document is blurry, a scan shows evidence of tampering, etc. Supply some details in the error message to make sure the user knows how to correct the issues.
 // - user_id (type int64): User identifier
@@ -3220,11 +3405,11 @@ func (bot *Bot) SetStickerPositionInSet(sticker string, position int64) (bool, e
 
 // SetStickerSetThumbOpts is the set of optional fields for Bot.SetStickerSetThumb.
 type SetStickerSetThumbOpts struct {
-	// A PNG image with the thumbnail, must be up to 128 kilobytes in size and have width and height exactly 100px, or a TGS animation with the thumbnail up to 32 kilobytes in size; see https://core.telegram.org/animated_stickers#technical-requirements for animated sticker technical requirements. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files. Animated sticker set thumbnail can't be uploaded via HTTP URL.
+	// A PNG image with the thumbnail, must be up to 128 kilobytes in size and have width and height exactly 100px, or a TGS animation with the thumbnail up to 32 kilobytes in size; see https://core.telegram.org/stickers#animated-sticker-requirements for animated sticker technical requirements, or a WEBM video with the thumbnail up to 32 kilobytes in size; see https://core.telegram.org/stickers#video-sticker-requirements for video sticker technical requirements. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files. Animated sticker set thumbnails can't be uploaded via HTTP URL.
 	Thumb InputFile
 }
 
-// SetStickerSetThumb Use this method to set the thumbnail of a sticker set. Animated thumbnails can be set for animated sticker sets only. Returns True on success.
+// SetStickerSetThumb Use this method to set the thumbnail of a sticker set. Animated thumbnails can be set for animated sticker sets only. Video thumbnails can be set only for video sticker sets only. Returns True on success.
 // - name (type string): Sticker set name
 // - user_id (type int64): User identifier of the sticker set owner
 // - opts (type SetStickerSetThumbOpts): All optional parameters.
@@ -3420,7 +3605,7 @@ type UnbanChatMemberOpts struct {
 }
 
 // UnbanChatMember Use this method to unban a previously banned user in a supergroup or channel. The user will not return to the group or channel automatically, but will be able to join via link, etc. The bot must be an administrator for this to work. By default, this method guarantees that after the call the user is not a member of the chat, but will be able to join it. So if the user is a member of the chat they will also be removed from the chat. If you don't want this, use the parameter only_if_banned. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target group or username of the target supergroup or channel (in the format @username)
+// - chat_id (type int64): Unique identifier for the target group or username of the target supergroup or channel (in the format @channelusername)
 // - user_id (type int64): Unique identifier of the target user
 // - opts (type UnbanChatMemberOpts): All optional parameters.
 // https://core.telegram.org/bots/api#unbanchatmember
