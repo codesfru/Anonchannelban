@@ -8,9 +8,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/PaulSonOfLars/gotgbot/v2"
@@ -23,9 +23,9 @@ type Updater struct {
 	UpdateChan chan json.RawMessage
 	ErrorLog   *log.Logger
 
-	idle    bool
-	running bool
-	server  *http.Server
+	stopIdling chan bool
+	running    chan bool
+	server     *http.Server
 }
 
 var errorLog = log.New(os.Stderr, "ERROR", log.LstdFlags)
@@ -62,8 +62,6 @@ type PollingOpts struct {
 	// DropPendingUpdates decides whether or not to drop "pending" updates; these are updates which were sent before
 	// the bot was started.
 	DropPendingUpdates bool
-	// Timeout is the local HTTP client timeout to be used. It is recommended to set this to GetUpdateOpts.Timeout+1.
-	Timeout time.Duration
 	// GetUpdatesOpts represents the opts passed to GetUpdates.
 	// Note: It is recommended you edit the values here when running in production environments.
 	// Changes might include:
@@ -89,50 +87,54 @@ func (u *Updater) StartPolling(b *gotgbot.Bot, opts *PollingOpts) error {
 	// - needing to convert the opt values to strings to pass to the values.
 	// - unnecessary unmarshalling of the (possibly multiple) full Update structs.
 	// Yes, this also makes me sad. :/
-	v := url.Values{}
+	v := map[string]string{}
 	dropPendingUpdates := false
-	pollTimeout := time.Second * 10
+	var reqOpts *gotgbot.RequestOpts
 
 	if opts != nil {
 		dropPendingUpdates = opts.DropPendingUpdates
-		if opts.Timeout != 0 {
-			pollTimeout = opts.Timeout
+		if opts.GetUpdatesOpts.RequestOpts != nil {
+			reqOpts = opts.GetUpdatesOpts.RequestOpts
 		}
 
-		v.Add("offset", strconv.FormatInt(opts.GetUpdatesOpts.Offset, 10))
-		v.Add("limit", strconv.FormatInt(opts.GetUpdatesOpts.Limit, 10))
-		v.Add("timeout", strconv.FormatInt(opts.GetUpdatesOpts.Timeout, 10))
+		v["offset"] = strconv.FormatInt(opts.GetUpdatesOpts.Offset, 10)
+		v["limit"] = strconv.FormatInt(opts.GetUpdatesOpts.Limit, 10)
+		v["timeout"] = strconv.FormatInt(opts.GetUpdatesOpts.Timeout, 10)
 		if opts.GetUpdatesOpts.AllowedUpdates != nil {
-			bytes, err := json.Marshal(opts.GetUpdatesOpts.AllowedUpdates)
+			bs, err := json.Marshal(opts.GetUpdatesOpts.AllowedUpdates)
 			if err != nil {
 				return fmt.Errorf("failed to marshal field allowed_updates: %w", err)
 			}
-			v.Add("allowed_updates", string(bytes))
+			v["allowed_updates"] = string(bs)
 		}
 	}
 
-	// Copy bot, such that we can edit values for polling
-	pollingBot := *b
-	pollingBot.GetTimeout = pollTimeout
-
 	go u.Dispatcher.Start(b)
-	go u.pollingLoop(pollingBot, dropPendingUpdates, v)
+	go u.pollingLoop(b, reqOpts, dropPendingUpdates, v)
 
 	return nil
 }
 
-func (u *Updater) pollingLoop(b gotgbot.Bot, dropPendingUpdates bool, v url.Values) {
-	u.running = true
+func (u *Updater) pollingLoop(b *gotgbot.Bot, opts *gotgbot.RequestOpts, dropPendingUpdates bool, v map[string]string) {
 
 	// if dropPendingUpdates, force the offset to -1
 	if dropPendingUpdates {
-		v.Set("offset", "-1")
+		v["offset"] = "-1"
 	}
 
 	var offset int64
-	for u.running {
-		// note: this bot instance uses a custom http.Client with longer timeouts
-		r, err := b.Get("getUpdates", v)
+
+	u.running = make(chan bool)
+	for {
+		select {
+		case <-u.running:
+			// if anything comes in, stop.
+			return
+		default:
+			// continue as usual
+		}
+
+		r, err := b.Request("getUpdates", v, nil, opts)
 		if err != nil {
 			u.ErrorLog.Println("failed to get updates; sleeping 1s: " + err.Error())
 			time.Sleep(time.Second)
@@ -164,7 +166,7 @@ func (u *Updater) pollingLoop(b gotgbot.Bot, dropPendingUpdates bool, v url.Valu
 		}
 
 		offset = lastUpdate.UpdateId + 1
-		v.Set("offset", strconv.FormatInt(offset, 10))
+		v["offset"] = strconv.FormatInt(offset, 10)
 		if dropPendingUpdates {
 			// Setting the offset to -1 gets just the last update; this should be skipped too.
 			dropPendingUpdates = false
@@ -180,9 +182,15 @@ func (u *Updater) pollingLoop(b gotgbot.Bot, dropPendingUpdates bool, v url.Valu
 
 // Idle starts an infinite loop to avoid the program exciting while the background threads handle updates.
 func (u *Updater) Idle() {
-	u.idle = true
+	u.stopIdling = make(chan bool)
 
-	for u.idle {
+	for {
+		select {
+		case <-u.stopIdling:
+			return
+		default:
+			// continue as usual
+		}
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -197,15 +205,21 @@ func (u *Updater) Stop() error {
 		}
 	}
 
-	// stop the polling loop
-	u.running = false
+	if u.running != nil {
+		// stop the polling loop
+		u.running <- false
+		close(u.running)
+	}
 
 	close(u.UpdateChan)
 
 	u.Dispatcher.Stop()
 
-	// stop idling
-	u.idle = false
+	if u.stopIdling != nil {
+		// stop idling
+		u.stopIdling <- false
+		close(u.stopIdling)
+	}
 	return nil
 }
 
@@ -224,13 +238,20 @@ func (u *Updater) StartWebhook(b *gotgbot.Bot, opts WebhookOpts) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/"+opts.URLPath, func(w http.ResponseWriter, r *http.Request) {
+		if opts.SecretToken != "" && opts.SecretToken != r.Header.Get("X-Telegram-Bot-Api-Secret-Token") {
+			// Drop any updates from invalid secret tokens.
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		bytes, _ := ioutil.ReadAll(r.Body)
 		u.UpdateChan <- bytes
 	})
 
 	u.server = &http.Server{
-		Addr:    opts.GetListenAddr(),
-		Handler: mux,
+		Addr:              opts.GetListenAddr(),
+		Handler:           mux,
+		ReadTimeout:       opts.ReadTimeout,
+		ReadHeaderTimeout: opts.ReadHeaderTimeout,
 	}
 
 	go func() {
@@ -248,13 +269,30 @@ func (u *Updater) StartWebhook(b *gotgbot.Bot, opts WebhookOpts) error {
 	return nil
 }
 
+// WebhookOpts represent various fields that are needed for configuring the local webhook server.
 type WebhookOpts struct {
-	Listen  string
-	Port    int
+	// Listen is the address to listen on (eg: localhost, 0.0.0.0, etc).
+	Listen string
+	// Port is the port listen on (eg 443, 8443, etc).
+	Port int
+	// URLPath defines the path to listen at; eg <domainname>/<URLPath>.
+	// Using the bot token here is often a good idea, as it is a secret known only by telegram.
 	URLPath string
+	// ReadTimeout is passed to the http server to limit the time it takes to read an incoming request.
+	// See http.Server for more details.
+	ReadTimeout time.Duration
+	// ReadHeaderTimeout is passed to the http server to limit the time it takes to read the headers of an incoming
+	// request.
+	// See http.Server for more details.
+	ReadHeaderTimeout time.Duration
 
+	// HTTPS cert and key files for custom signed certificates
 	CertFile string
 	KeyFile  string
+
+	// The secret token used in the Bot.SetWebhook call, which can be used to ensure that the request comes from a
+	// webhook set by you.
+	SecretToken string
 }
 
 // GetListenAddr returns the local listening address, including port.
@@ -271,5 +309,5 @@ func (w *WebhookOpts) GetListenAddr() string {
 // GetWebhookURL returns the domain in the form domain/path.
 // eg: example.com/super_secret_token
 func (w *WebhookOpts) GetWebhookURL(domain string) string {
-	return fmt.Sprintf("%s/%s", domain, w.URLPath)
+	return fmt.Sprintf("%s/%s", strings.TrimSuffix(domain, "/"), w.URLPath)
 }

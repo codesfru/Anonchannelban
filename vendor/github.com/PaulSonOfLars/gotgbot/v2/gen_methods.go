@@ -8,48 +8,51 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	urlLib "net/url" // renamed to avoid clashes with url vars
 	"strconv"
 )
 
 // AddStickerToSetOpts is the set of optional fields for Bot.AddStickerToSet.
 type AddStickerToSetOpts struct {
-	// PNG image with the sticker, must be up to 512 kilobytes in size, dimensions must not exceed 512px, and either width or height must be exactly 512px. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+	// PNG image with the sticker, must be up to 512 kilobytes in size, dimensions must not exceed 512px, and either width or height must be exactly 512px. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 	PngSticker InputFile
-	// TGS animation with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/animated_stickers#technical-requirements for technical requirements
+	// TGS animation with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/stickers#animated-sticker-requirements for technical requirements
 	TgsSticker InputFile
+	// WEBM video with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/stickers#video-sticker-requirements for technical requirements
+	WebmSticker InputFile
 	// A JSON-serialized object for position where the mask should be placed on faces
 	MaskPosition MaskPosition
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// AddStickerToSet Use this method to add a new sticker to a set created by the bot. You must use exactly one of the fields png_sticker or tgs_sticker. Animated stickers can be added to animated sticker sets and only to them. Animated sticker sets can have up to 50 stickers. Static sticker sets can have up to 120 stickers. Returns True on success.
-// - user_id (type int64): User identifier of sticker set owner
+// AddStickerToSet Use this method to add a new sticker to a set created by the bot. You must use exactly one of the fields png_sticker, tgs_sticker, or webm_sticker. Animated stickers can be added to animated sticker sets and only to them. Animated sticker sets can have up to 50 stickers. Static sticker sets can have up to 120 stickers. Returns True on success.
+// - userId (type int64): User identifier of sticker set owner
 // - name (type string): Sticker set name
 // - emojis (type string): One or more emoji corresponding to the sticker
 // - opts (type AddStickerToSetOpts): All optional parameters.
 // https://core.telegram.org/bots/api#addstickertoset
 func (bot *Bot) AddStickerToSet(userId int64, name string, emojis string, opts *AddStickerToSetOpts) (bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("user_id", strconv.FormatInt(userId, 10))
-	v.Add("name", name)
-	v.Add("emojis", emojis)
+	v["user_id"] = strconv.FormatInt(userId, 10)
+	v["name"] = name
+	v["emojis"] = emojis
 	if opts != nil {
 		if opts.PngSticker != nil {
 			switch m := opts.PngSticker.(type) {
 			case string:
-				v.Add("png_sticker", m)
+				v["png_sticker"] = m
 
 			case NamedReader:
-				v.Add("png_sticker", "attach://png_sticker")
+				v["png_sticker"] = "attach://png_sticker"
 				data["png_sticker"] = m
 
 			case io.Reader:
-				v.Add("png_sticker", "attach://png_sticker")
+				v["png_sticker"] = "attach://png_sticker"
 				data["png_sticker"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("png_sticker", "attach://png_sticker")
+				v["png_sticker"] = "attach://png_sticker"
 				data["png_sticker"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
@@ -59,29 +62,52 @@ func (bot *Bot) AddStickerToSet(userId int64, name string, emojis string, opts *
 		if opts.TgsSticker != nil {
 			switch m := opts.TgsSticker.(type) {
 			case NamedReader:
-				v.Add("tgs_sticker", "attach://tgs_sticker")
+				v["tgs_sticker"] = "attach://tgs_sticker"
 				data["tgs_sticker"] = m
 
 			case io.Reader:
-				v.Add("tgs_sticker", "attach://tgs_sticker")
+				v["tgs_sticker"] = "attach://tgs_sticker"
 				data["tgs_sticker"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("tgs_sticker", "attach://tgs_sticker")
+				v["tgs_sticker"] = "attach://tgs_sticker"
 				data["tgs_sticker"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
 				return false, fmt.Errorf("unknown type for InputFile: %T", opts.TgsSticker)
 			}
 		}
+		if opts.WebmSticker != nil {
+			switch m := opts.WebmSticker.(type) {
+			case NamedReader:
+				v["webm_sticker"] = "attach://webm_sticker"
+				data["webm_sticker"] = m
+
+			case io.Reader:
+				v["webm_sticker"] = "attach://webm_sticker"
+				data["webm_sticker"] = NamedFile{File: m}
+
+			case []byte:
+				v["webm_sticker"] = "attach://webm_sticker"
+				data["webm_sticker"] = NamedFile{File: bytes.NewReader(m)}
+
+			default:
+				return false, fmt.Errorf("unknown type for InputFile: %T", opts.WebmSticker)
+			}
+		}
 		bs, err := json.Marshal(opts.MaskPosition)
 		if err != nil {
 			return false, fmt.Errorf("failed to marshal field mask_position: %w", err)
 		}
-		v.Add("mask_position", string(bs))
+		v["mask_position"] = string(bs)
 	}
 
-	r, err := bot.Post("addStickerToSet", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("addStickerToSet", v, data, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -96,29 +122,36 @@ type AnswerCallbackQueryOpts struct {
 	Text string
 	// If True, an alert will be shown by the client instead of a notification at the top of the chat screen. Defaults to false.
 	ShowAlert bool
-	// URL that will be opened by the user's client. If you have created a Game and accepted the conditions via @Botfather, specify the URL that opens your game - note that this will only work if the query comes from a callback_game button. Otherwise, you may use links like t.me/your_bot?start=XXXX that open your bot with a parameter.
+	// URL that will be opened by the user's client. If you have created a Game and accepted the conditions via @BotFather, specify the URL that opens your game - note that this will only work if the query comes from a callback_game button. Otherwise, you may use links like t.me/your_bot?start=XXXX that open your bot with a parameter.
 	Url string
 	// The maximum amount of time in seconds that the result of the callback query may be cached client-side. Telegram apps will support caching starting in version 3.14. Defaults to 0.
 	CacheTime int64
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // AnswerCallbackQuery Use this method to send answers to callback queries sent from inline keyboards. The answer will be displayed to the user as a notification at the top of the chat screen or as an alert. On success, True is returned.
-// - callback_query_id (type string): Unique identifier for the query to be answered
+// - callbackQueryId (type string): Unique identifier for the query to be answered
 // - opts (type AnswerCallbackQueryOpts): All optional parameters.
 // https://core.telegram.org/bots/api#answercallbackquery
 func (bot *Bot) AnswerCallbackQuery(callbackQueryId string, opts *AnswerCallbackQueryOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("callback_query_id", callbackQueryId)
+	v := map[string]string{}
+	v["callback_query_id"] = callbackQueryId
 	if opts != nil {
-		v.Add("text", opts.Text)
-		v.Add("show_alert", strconv.FormatBool(opts.ShowAlert))
-		v.Add("url", opts.Url)
+		v["text"] = opts.Text
+		v["show_alert"] = strconv.FormatBool(opts.ShowAlert)
+		v["url"] = opts.Url
 		if opts.CacheTime != 0 {
-			v.Add("cache_time", strconv.FormatInt(opts.CacheTime, 10))
+			v["cache_time"] = strconv.FormatInt(opts.CacheTime, 10)
 		}
 	}
 
-	r, err := bot.Get("answerCallbackQuery", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("answerCallbackQuery", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -131,7 +164,7 @@ func (bot *Bot) AnswerCallbackQuery(callbackQueryId string, opts *AnswerCallback
 type AnswerInlineQueryOpts struct {
 	// The maximum amount of time in seconds that the result of the inline query may be cached on the server. Defaults to 300.
 	CacheTime int64
-	// Pass True, if results may be cached on the server side only for the user that sent the query. By default, results may be returned to any user who sends the same query
+	// Pass True if results may be cached on the server side only for the user that sent the query. By default, results may be returned to any user who sends the same query
 	IsPersonal bool
 	// Pass the offset that a client should send in the next query with the same text to receive more results. Pass an empty string if there are no more results or if you don't support pagination. Offset length can't exceed 64 bytes.
 	NextOffset string
@@ -139,34 +172,42 @@ type AnswerInlineQueryOpts struct {
 	SwitchPmText string
 	// Deep-linking parameter for the /start message sent to the bot when user presses the switch button. 1-64 characters, only A-Z, a-z, 0-9, _ and - are allowed. Example: An inline bot that sends YouTube videos can ask the user to connect the bot to their YouTube account to adapt search results accordingly. To do this, it displays a 'Connect your YouTube account' button above the results, or even before showing any. The user presses the button, switches to a private chat with the bot and, in doing so, passes a start parameter that instructs the bot to return an OAuth link. Once done, the bot can offer a switch_inline button so that the user can easily return to the chat where they wanted to use the bot's inline capabilities.
 	SwitchPmParameter string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// AnswerInlineQuery Use this method to send answers to an inline query. On success, True is returned.No more than 50 results per query are allowed.
-// - inline_query_id (type string): Unique identifier for the answered query
+// AnswerInlineQuery Use this method to send answers to an inline query. On success, True is returned.
+// No more than 50 results per query are allowed.
+// - inlineQueryId (type string): Unique identifier for the answered query
 // - results (type []InlineQueryResult): A JSON-serialized array of results for the inline query
 // - opts (type AnswerInlineQueryOpts): All optional parameters.
 // https://core.telegram.org/bots/api#answerinlinequery
 func (bot *Bot) AnswerInlineQuery(inlineQueryId string, results []InlineQueryResult, opts *AnswerInlineQueryOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("inline_query_id", inlineQueryId)
+	v := map[string]string{}
+	v["inline_query_id"] = inlineQueryId
 	if results != nil {
 		bs, err := json.Marshal(results)
 		if err != nil {
 			return false, fmt.Errorf("failed to marshal field results: %w", err)
 		}
-		v.Add("results", string(bs))
+		v["results"] = string(bs)
 	}
 	if opts != nil {
 		if opts.CacheTime != 0 {
-			v.Add("cache_time", strconv.FormatInt(opts.CacheTime, 10))
+			v["cache_time"] = strconv.FormatInt(opts.CacheTime, 10)
 		}
-		v.Add("is_personal", strconv.FormatBool(opts.IsPersonal))
-		v.Add("next_offset", opts.NextOffset)
-		v.Add("switch_pm_text", opts.SwitchPmText)
-		v.Add("switch_pm_parameter", opts.SwitchPmParameter)
+		v["is_personal"] = strconv.FormatBool(opts.IsPersonal)
+		v["next_offset"] = opts.NextOffset
+		v["switch_pm_text"] = opts.SwitchPmText
+		v["switch_pm_parameter"] = opts.SwitchPmParameter
 	}
 
-	r, err := bot.Get("answerInlineQuery", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("answerInlineQuery", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -179,22 +220,29 @@ func (bot *Bot) AnswerInlineQuery(inlineQueryId string, results []InlineQueryRes
 type AnswerPreCheckoutQueryOpts struct {
 	// Required if ok is False. Error message in human readable form that explains the reason for failure to proceed with the checkout (e.g. "Sorry, somebody just bought the last of our amazing black T-shirts while you were busy filling out your payment details. Please choose a different color or garment!"). Telegram will display this message to the user.
 	ErrorMessage string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // AnswerPreCheckoutQuery Once the user has confirmed their payment and shipping details, the Bot API sends the final confirmation in the form of an Update with the field pre_checkout_query. Use this method to respond to such pre-checkout queries. On success, True is returned. Note: The Bot API must receive an answer within 10 seconds after the pre-checkout query was sent.
-// - pre_checkout_query_id (type string): Unique identifier for the query to be answered
+// - preCheckoutQueryId (type string): Unique identifier for the query to be answered
 // - ok (type bool): Specify True if everything is alright (goods are available, etc.) and the bot is ready to proceed with the order. Use False if there are any problems.
 // - opts (type AnswerPreCheckoutQueryOpts): All optional parameters.
 // https://core.telegram.org/bots/api#answerprecheckoutquery
 func (bot *Bot) AnswerPreCheckoutQuery(preCheckoutQueryId string, ok bool, opts *AnswerPreCheckoutQueryOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("pre_checkout_query_id", preCheckoutQueryId)
-	v.Add("ok", strconv.FormatBool(ok))
+	v := map[string]string{}
+	v["pre_checkout_query_id"] = preCheckoutQueryId
+	v["ok"] = strconv.FormatBool(ok)
 	if opts != nil {
-		v.Add("error_message", opts.ErrorMessage)
+		v["error_message"] = opts.ErrorMessage
 	}
 
-	r, err := bot.Get("answerPreCheckoutQuery", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("answerPreCheckoutQuery", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -209,29 +257,36 @@ type AnswerShippingQueryOpts struct {
 	ShippingOptions []ShippingOption
 	// Required if ok is False. Error message in human readable form that explains why it is impossible to complete the order (e.g. "Sorry, delivery to your desired address is unavailable'). Telegram will display this message to the user.
 	ErrorMessage string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // AnswerShippingQuery If you sent an invoice requesting a shipping address and the parameter is_flexible was specified, the Bot API will send an Update with a shipping_query field to the bot. Use this method to reply to shipping queries. On success, True is returned.
-// - shipping_query_id (type string): Unique identifier for the query to be answered
-// - ok (type bool): Specify True if delivery to the specified address is possible and False if there are any problems (for example, if delivery to the specified address is not possible)
+// - shippingQueryId (type string): Unique identifier for the query to be answered
+// - ok (type bool): Pass True if delivery to the specified address is possible and False if there are any problems (for example, if delivery to the specified address is not possible)
 // - opts (type AnswerShippingQueryOpts): All optional parameters.
 // https://core.telegram.org/bots/api#answershippingquery
 func (bot *Bot) AnswerShippingQuery(shippingQueryId string, ok bool, opts *AnswerShippingQueryOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("shipping_query_id", shippingQueryId)
-	v.Add("ok", strconv.FormatBool(ok))
+	v := map[string]string{}
+	v["shipping_query_id"] = shippingQueryId
+	v["ok"] = strconv.FormatBool(ok)
 	if opts != nil {
 		if opts.ShippingOptions != nil {
 			bs, err := json.Marshal(opts.ShippingOptions)
 			if err != nil {
 				return false, fmt.Errorf("failed to marshal field shipping_options: %w", err)
 			}
-			v.Add("shipping_options", string(bs))
+			v["shipping_options"] = string(bs)
 		}
-		v.Add("error_message", opts.ErrorMessage)
+		v["error_message"] = opts.ErrorMessage
 	}
 
-	r, err := bot.Get("answerShippingQuery", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("answerShippingQuery", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -240,16 +295,60 @@ func (bot *Bot) AnswerShippingQuery(shippingQueryId string, ok bool, opts *Answe
 	return b, json.Unmarshal(r, &b)
 }
 
-// ApproveChatJoinRequest Use this method to approve a chat join request. The bot must be an administrator in the chat for this to work and must have the can_invite_users administrator right. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - user_id (type int64): Unique identifier of the target user
-// https://core.telegram.org/bots/api#approvechatjoinrequest
-func (bot *Bot) ApproveChatJoinRequest(chatId int64, userId int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+// AnswerWebAppQueryOpts is the set of optional fields for Bot.AnswerWebAppQuery.
+type AnswerWebAppQueryOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("approveChatJoinRequest", v)
+// AnswerWebAppQuery Use this method to set the result of an interaction with a Web App and send a corresponding message on behalf of the user to the chat from which the query originated. On success, a SentWebAppMessage object is returned.
+// - webAppQueryId (type string): Unique identifier for the query to be answered
+// - result (type InlineQueryResult): A JSON-serialized object describing the message to be sent
+// https://core.telegram.org/bots/api#answerwebappquery
+func (bot *Bot) AnswerWebAppQuery(webAppQueryId string, result InlineQueryResult, opts *AnswerWebAppQueryOpts) (*SentWebAppMessage, error) {
+	v := map[string]string{}
+	v["web_app_query_id"] = webAppQueryId
+	bs, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal field result: %w", err)
+	}
+	v["result"] = string(bs)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("answerWebAppQuery", v, nil, reqOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	var s SentWebAppMessage
+	return &s, json.Unmarshal(r, &s)
+}
+
+// ApproveChatJoinRequestOpts is the set of optional fields for Bot.ApproveChatJoinRequest.
+type ApproveChatJoinRequestOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
+// ApproveChatJoinRequest Use this method to approve a chat join request. The bot must be an administrator in the chat for this to work and must have the can_invite_users administrator right. Returns True on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - userId (type int64): Unique identifier of the target user
+// https://core.telegram.org/bots/api#approvechatjoinrequest
+func (bot *Bot) ApproveChatJoinRequest(chatId int64, userId int64, opts *ApproveChatJoinRequestOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["user_id"] = strconv.FormatInt(userId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("approveChatJoinRequest", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -264,25 +363,32 @@ type BanChatMemberOpts struct {
 	UntilDate int64
 	// Pass True to delete all messages from the chat for the user that is being removed. If False, the user will be able to see messages in the group that were sent before the user was removed. Always True for supergroups and channels.
 	RevokeMessages bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // BanChatMember Use this method to ban a user in a group, a supergroup or a channel. In the case of supergroups and channels, the user will not be able to return to the chat on their own using invite links, etc., unless unbanned first. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target group or username of the target supergroup or channel (in the format @channelusername)
-// - user_id (type int64): Unique identifier of the target user
+// - chatId (type int64): Unique identifier for the target group or username of the target supergroup or channel (in the format @channelusername)
+// - userId (type int64): Unique identifier of the target user
 // - opts (type BanChatMemberOpts): All optional parameters.
 // https://core.telegram.org/bots/api#banchatmember
 func (bot *Bot) BanChatMember(chatId int64, userId int64, opts *BanChatMemberOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["user_id"] = strconv.FormatInt(userId, 10)
 	if opts != nil {
 		if opts.UntilDate != 0 {
-			v.Add("until_date", strconv.FormatInt(opts.UntilDate, 10))
+			v["until_date"] = strconv.FormatInt(opts.UntilDate, 10)
 		}
-		v.Add("revoke_messages", strconv.FormatBool(opts.RevokeMessages))
+		v["revoke_messages"] = strconv.FormatBool(opts.RevokeMessages)
 	}
 
-	r, err := bot.Get("banChatMember", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("banChatMember", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -291,30 +397,52 @@ func (bot *Bot) BanChatMember(chatId int64, userId int64, opts *BanChatMemberOpt
 	return b, json.Unmarshal(r, &b)
 }
 
-// BanChatSenderChat Use this method to ban a channel chat in a supergroup or a channel. Until the chat is unbanned, the owner of the banned chat won't be able to send messages on behalf of any of their channels. The bot must be an administrator in the supergroup or channel for this to work and must have the appropriate administrator rights. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - sender_chat_id (type int64): Unique identifier of the target sender chat
-// https://core.telegram.org/bots/api#banchatsenderchat
-func (bot *Bot) BanChatSenderChat(chatId int64, senderChatId int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("sender_chat_id", strconv.FormatInt(senderChatId, 10))
+// BanChatSenderChatOpts is the set of optional fields for Bot.BanChatSenderChat.
+type BanChatSenderChatOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("banChatSenderChat", v)
+// BanChatSenderChat Use this method to ban a channel chat in a supergroup or a channel. Until the chat is unbanned, the owner of the banned chat won't be able to send messages on behalf of any of their channels. The bot must be an administrator in the supergroup or channel for this to work and must have the appropriate administrator rights. Returns True on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - senderChatId (type int64): Unique identifier of the target sender chat
+// https://core.telegram.org/bots/api#banchatsenderchat
+func (bot *Bot) BanChatSenderChat(chatId int64, senderChatId int64, opts *BanChatSenderChatOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["sender_chat_id"] = strconv.FormatInt(senderChatId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("banChatSenderChat", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
 
 	var b bool
 	return b, json.Unmarshal(r, &b)
+}
+
+// CloseOpts is the set of optional fields for Bot.Close.
+type CloseOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // Close Use this method to close the bot instance before moving it from one local server to another. You need to delete the webhook before calling this method to ensure that the bot isn't launched again after server restart. The method will return error 429 in the first 10 minutes after the bot is launched. Returns True on success. Requires no parameters.
 // https://core.telegram.org/bots/api#close
-func (bot *Bot) Close() (bool, error) {
-	v := urlLib.Values{}
+func (bot *Bot) Close(opts *CloseOpts) (bool, error) {
+	v := map[string]string{}
 
-	r, err := bot.Get("close", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("close", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -337,49 +465,56 @@ type CopyMessageOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// CopyMessage Use this method to copy messages of any kind. Service messages and invoice messages can't be copied. The method is analogous to the method forwardMessage, but the copied message doesn't have a link to the original message. Returns the MessageId of the sent message on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - from_chat_id (type int64): Unique identifier for the chat where the original message was sent (or channel username in the format @channelusername)
-// - message_id (type int64): Message identifier in the chat specified in from_chat_id
+// CopyMessage Use this method to copy messages of any kind. Service messages and invoice messages can't be copied. A quiz poll can be copied only if the value of the field correct_option_id is known to the bot. The method is analogous to the method forwardMessage, but the copied message doesn't have a link to the original message. Returns the MessageId of the sent message on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - fromChatId (type int64): Unique identifier for the chat where the original message was sent (or channel username in the format @channelusername)
+// - messageId (type int64): Message identifier in the chat specified in from_chat_id
 // - opts (type CopyMessageOpts): All optional parameters.
 // https://core.telegram.org/bots/api#copymessage
 func (bot *Bot) CopyMessage(chatId int64, fromChatId int64, messageId int64, opts *CopyMessageOpts) (*MessageId, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("from_chat_id", strconv.FormatInt(fromChatId, 10))
-	v.Add("message_id", strconv.FormatInt(messageId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["from_chat_id"] = strconv.FormatInt(fromChatId, 10)
+	v["message_id"] = strconv.FormatInt(messageId, 10)
 	if opts != nil {
-		v.Add("caption", opts.Caption)
-		v.Add("parse_mode", opts.ParseMode)
+		v["caption"] = opts.Caption
+		v["parse_mode"] = opts.ParseMode
 		if opts.CaptionEntities != nil {
 			bs, err := json.Marshal(opts.CaptionEntities)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field caption_entities: %w", err)
 			}
-			v.Add("caption_entities", string(bs))
+			v["caption_entities"] = string(bs)
 		}
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Get("copyMessage", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("copyMessage", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -394,31 +529,38 @@ type CreateChatInviteLinkOpts struct {
 	Name string
 	// Point in time (Unix timestamp) when the link will expire
 	ExpireDate int64
-	// Maximum number of users that can be members of the chat simultaneously after joining the chat via this invite link; 1-99999
+	// The maximum number of users that can be members of the chat simultaneously after joining the chat via this invite link; 1-99999
 	MemberLimit int64
 	// True, if users joining the chat via the link need to be approved by chat administrators. If True, member_limit can't be specified
 	CreatesJoinRequest bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // CreateChatInviteLink Use this method to create an additional invite link for a chat. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. The link can be revoked using the method revokeChatInviteLink. Returns the new invite link as ChatInviteLink object.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - opts (type CreateChatInviteLinkOpts): All optional parameters.
 // https://core.telegram.org/bots/api#createchatinvitelink
 func (bot *Bot) CreateChatInviteLink(chatId int64, opts *CreateChatInviteLinkOpts) (*ChatInviteLink, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if opts != nil {
-		v.Add("name", opts.Name)
+		v["name"] = opts.Name
 		if opts.ExpireDate != 0 {
-			v.Add("expire_date", strconv.FormatInt(opts.ExpireDate, 10))
+			v["expire_date"] = strconv.FormatInt(opts.ExpireDate, 10)
 		}
 		if opts.MemberLimit != 0 {
-			v.Add("member_limit", strconv.FormatInt(opts.MemberLimit, 10))
+			v["member_limit"] = strconv.FormatInt(opts.MemberLimit, 10)
 		}
-		v.Add("creates_join_request", strconv.FormatBool(opts.CreatesJoinRequest))
+		v["creates_join_request"] = strconv.FormatBool(opts.CreatesJoinRequest)
 	}
 
-	r, err := bot.Get("createChatInviteLink", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("createChatInviteLink", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -427,48 +569,154 @@ func (bot *Bot) CreateChatInviteLink(chatId int64, opts *CreateChatInviteLinkOpt
 	return &c, json.Unmarshal(r, &c)
 }
 
-// CreateNewStickerSetOpts is the set of optional fields for Bot.CreateNewStickerSet.
-type CreateNewStickerSetOpts struct {
-	// PNG image with the sticker, must be up to 512 kilobytes in size, dimensions must not exceed 512px, and either width or height must be exactly 512px. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
-	PngSticker InputFile
-	// TGS animation with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/animated_stickers#technical-requirements for technical requirements
-	TgsSticker InputFile
-	// Pass True, if a set of mask stickers should be created
-	ContainsMasks bool
-	// A JSON-serialized object for position where the mask should be placed on faces
-	MaskPosition MaskPosition
+// CreateInvoiceLinkOpts is the set of optional fields for Bot.CreateInvoiceLink.
+type CreateInvoiceLinkOpts struct {
+	// The maximum accepted amount for tips in the smallest units of the currency (integer, not float/double). For example, for a maximum tip of US$ 1.45 pass max_tip_amount = 145. See the exp parameter in currencies.json, it shows the number of digits past the decimal point for each currency (2 for the majority of currencies). Defaults to 0
+	MaxTipAmount int64
+	// A JSON-serialized array of suggested amounts of tips in the smallest units of the currency (integer, not float/double). At most 4 suggested tip amounts can be specified. The suggested tip amounts must be positive, passed in a strictly increased order and must not exceed max_tip_amount.
+	SuggestedTipAmounts []int64
+	// JSON-serialized data about the invoice, which will be shared with the payment provider. A detailed description of required fields should be provided by the payment provider.
+	ProviderData string
+	// URL of the product photo for the invoice. Can be a photo of the goods or a marketing image for a service.
+	PhotoUrl string
+	// Photo size in bytes
+	PhotoSize int64
+	// Photo width
+	PhotoWidth int64
+	// Photo height
+	PhotoHeight int64
+	// Pass True if you require the user's full name to complete the order
+	NeedName bool
+	// Pass True if you require the user's phone number to complete the order
+	NeedPhoneNumber bool
+	// Pass True if you require the user's email address to complete the order
+	NeedEmail bool
+	// Pass True if you require the user's shipping address to complete the order
+	NeedShippingAddress bool
+	// Pass True if the user's phone number should be sent to the provider
+	SendPhoneNumberToProvider bool
+	// Pass True if the user's email address should be sent to the provider
+	SendEmailToProvider bool
+	// Pass True if the final price depends on the shipping method
+	IsFlexible bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// CreateNewStickerSet Use this method to create a new sticker set owned by a user. The bot will be able to edit the sticker set thus created. You must use exactly one of the fields png_sticker or tgs_sticker. Returns True on success.
-// - user_id (type int64): User identifier of created sticker set owner
-// - name (type string): Short name of sticker set, to be used in t.me/addstickers/ URLs (e.g., animals). Can contain only english letters, digits and underscores. Must begin with a letter, can't contain consecutive underscores and must end in "_by_<bot username>". <bot_username> is case insensitive. 1-64 characters.
+// CreateInvoiceLink Use this method to create a link for an invoice. Returns the created invoice link as String on success.
+// - title (type string): Product name, 1-32 characters
+// - description (type string): Product description, 1-255 characters
+// - payload (type string): Bot-defined invoice payload, 1-128 bytes. This will not be displayed to the user, use for your internal processes.
+// - providerToken (type string): Payment provider token, obtained via BotFather
+// - currency (type string): Three-letter ISO 4217 currency code, see more on currencies
+// - prices (type []LabeledPrice): Price breakdown, a JSON-serialized list of components (e.g. product price, tax, discount, delivery cost, delivery tax, bonus, etc.)
+// - opts (type CreateInvoiceLinkOpts): All optional parameters.
+// https://core.telegram.org/bots/api#createinvoicelink
+func (bot *Bot) CreateInvoiceLink(title string, description string, payload string, providerToken string, currency string, prices []LabeledPrice, opts *CreateInvoiceLinkOpts) (string, error) {
+	v := map[string]string{}
+	v["title"] = title
+	v["description"] = description
+	v["payload"] = payload
+	v["provider_token"] = providerToken
+	v["currency"] = currency
+	if prices != nil {
+		bs, err := json.Marshal(prices)
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal field prices: %w", err)
+		}
+		v["prices"] = string(bs)
+	}
+	if opts != nil {
+		if opts.MaxTipAmount != 0 {
+			v["max_tip_amount"] = strconv.FormatInt(opts.MaxTipAmount, 10)
+		}
+		if opts.SuggestedTipAmounts != nil {
+			bs, err := json.Marshal(opts.SuggestedTipAmounts)
+			if err != nil {
+				return "", fmt.Errorf("failed to marshal field suggested_tip_amounts: %w", err)
+			}
+			v["suggested_tip_amounts"] = string(bs)
+		}
+		v["provider_data"] = opts.ProviderData
+		v["photo_url"] = opts.PhotoUrl
+		if opts.PhotoSize != 0 {
+			v["photo_size"] = strconv.FormatInt(opts.PhotoSize, 10)
+		}
+		if opts.PhotoWidth != 0 {
+			v["photo_width"] = strconv.FormatInt(opts.PhotoWidth, 10)
+		}
+		if opts.PhotoHeight != 0 {
+			v["photo_height"] = strconv.FormatInt(opts.PhotoHeight, 10)
+		}
+		v["need_name"] = strconv.FormatBool(opts.NeedName)
+		v["need_phone_number"] = strconv.FormatBool(opts.NeedPhoneNumber)
+		v["need_email"] = strconv.FormatBool(opts.NeedEmail)
+		v["need_shipping_address"] = strconv.FormatBool(opts.NeedShippingAddress)
+		v["send_phone_number_to_provider"] = strconv.FormatBool(opts.SendPhoneNumberToProvider)
+		v["send_email_to_provider"] = strconv.FormatBool(opts.SendEmailToProvider)
+		v["is_flexible"] = strconv.FormatBool(opts.IsFlexible)
+	}
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("createInvoiceLink", v, nil, reqOpts)
+	if err != nil {
+		return "", err
+	}
+
+	var s string
+	return s, json.Unmarshal(r, &s)
+}
+
+// CreateNewStickerSetOpts is the set of optional fields for Bot.CreateNewStickerSet.
+type CreateNewStickerSetOpts struct {
+	// PNG image with the sticker, must be up to 512 kilobytes in size, dimensions must not exceed 512px, and either width or height must be exactly 512px. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	PngSticker InputFile
+	// TGS animation with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/stickers#animated-sticker-requirements for technical requirements
+	TgsSticker InputFile
+	// WEBM video with the sticker, uploaded using multipart/form-data. See https://core.telegram.org/stickers#video-sticker-requirements for technical requirements
+	WebmSticker InputFile
+	// Type of stickers in the set, pass "regular" or "mask". Custom emoji sticker sets can't be created via the Bot API at the moment. By default, a regular sticker set is created.
+	StickerType string
+	// A JSON-serialized object for position where the mask should be placed on faces
+	MaskPosition MaskPosition
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
+// CreateNewStickerSet Use this method to create a new sticker set owned by a user. The bot will be able to edit the sticker set thus created. You must use exactly one of the fields png_sticker, tgs_sticker, or webm_sticker. Returns True on success.
+// - userId (type int64): User identifier of created sticker set owner
+// - name (type string): Short name of sticker set, to be used in t.me/addstickers/ URLs (e.g., animals). Can contain only English letters, digits and underscores. Must begin with a letter, can't contain consecutive underscores and must end in "_by_<bot_username>". <bot_username> is case insensitive. 1-64 characters.
 // - title (type string): Sticker set title, 1-64 characters
 // - emojis (type string): One or more emoji corresponding to the sticker
 // - opts (type CreateNewStickerSetOpts): All optional parameters.
 // https://core.telegram.org/bots/api#createnewstickerset
 func (bot *Bot) CreateNewStickerSet(userId int64, name string, title string, emojis string, opts *CreateNewStickerSetOpts) (bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("user_id", strconv.FormatInt(userId, 10))
-	v.Add("name", name)
-	v.Add("title", title)
-	v.Add("emojis", emojis)
+	v["user_id"] = strconv.FormatInt(userId, 10)
+	v["name"] = name
+	v["title"] = title
+	v["emojis"] = emojis
 	if opts != nil {
 		if opts.PngSticker != nil {
 			switch m := opts.PngSticker.(type) {
 			case string:
-				v.Add("png_sticker", m)
+				v["png_sticker"] = m
 
 			case NamedReader:
-				v.Add("png_sticker", "attach://png_sticker")
+				v["png_sticker"] = "attach://png_sticker"
 				data["png_sticker"] = m
 
 			case io.Reader:
-				v.Add("png_sticker", "attach://png_sticker")
+				v["png_sticker"] = "attach://png_sticker"
 				data["png_sticker"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("png_sticker", "attach://png_sticker")
+				v["png_sticker"] = "attach://png_sticker"
 				data["png_sticker"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
@@ -478,80 +726,136 @@ func (bot *Bot) CreateNewStickerSet(userId int64, name string, title string, emo
 		if opts.TgsSticker != nil {
 			switch m := opts.TgsSticker.(type) {
 			case NamedReader:
-				v.Add("tgs_sticker", "attach://tgs_sticker")
+				v["tgs_sticker"] = "attach://tgs_sticker"
 				data["tgs_sticker"] = m
 
 			case io.Reader:
-				v.Add("tgs_sticker", "attach://tgs_sticker")
+				v["tgs_sticker"] = "attach://tgs_sticker"
 				data["tgs_sticker"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("tgs_sticker", "attach://tgs_sticker")
+				v["tgs_sticker"] = "attach://tgs_sticker"
 				data["tgs_sticker"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
 				return false, fmt.Errorf("unknown type for InputFile: %T", opts.TgsSticker)
 			}
 		}
-		v.Add("contains_masks", strconv.FormatBool(opts.ContainsMasks))
+		if opts.WebmSticker != nil {
+			switch m := opts.WebmSticker.(type) {
+			case NamedReader:
+				v["webm_sticker"] = "attach://webm_sticker"
+				data["webm_sticker"] = m
+
+			case io.Reader:
+				v["webm_sticker"] = "attach://webm_sticker"
+				data["webm_sticker"] = NamedFile{File: m}
+
+			case []byte:
+				v["webm_sticker"] = "attach://webm_sticker"
+				data["webm_sticker"] = NamedFile{File: bytes.NewReader(m)}
+
+			default:
+				return false, fmt.Errorf("unknown type for InputFile: %T", opts.WebmSticker)
+			}
+		}
+		v["sticker_type"] = opts.StickerType
 		bs, err := json.Marshal(opts.MaskPosition)
 		if err != nil {
 			return false, fmt.Errorf("failed to marshal field mask_position: %w", err)
 		}
-		v.Add("mask_position", string(bs))
+		v["mask_position"] = string(bs)
 	}
 
-	r, err := bot.Post("createNewStickerSet", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("createNewStickerSet", v, data, reqOpts)
 	if err != nil {
 		return false, err
 	}
 
 	var b bool
 	return b, json.Unmarshal(r, &b)
+}
+
+// DeclineChatJoinRequestOpts is the set of optional fields for Bot.DeclineChatJoinRequest.
+type DeclineChatJoinRequestOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // DeclineChatJoinRequest Use this method to decline a chat join request. The bot must be an administrator in the chat for this to work and must have the can_invite_users administrator right. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - user_id (type int64): Unique identifier of the target user
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - userId (type int64): Unique identifier of the target user
 // https://core.telegram.org/bots/api#declinechatjoinrequest
-func (bot *Bot) DeclineChatJoinRequest(chatId int64, userId int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+func (bot *Bot) DeclineChatJoinRequest(chatId int64, userId int64, opts *DeclineChatJoinRequestOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["user_id"] = strconv.FormatInt(userId, 10)
 
-	r, err := bot.Get("declineChatJoinRequest", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("declineChatJoinRequest", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
 
 	var b bool
 	return b, json.Unmarshal(r, &b)
+}
+
+// DeleteChatPhotoOpts is the set of optional fields for Bot.DeleteChatPhoto.
+type DeleteChatPhotoOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // DeleteChatPhoto Use this method to delete a chat photo. Photos can't be changed for private chats. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // https://core.telegram.org/bots/api#deletechatphoto
-func (bot *Bot) DeleteChatPhoto(chatId int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+func (bot *Bot) DeleteChatPhoto(chatId int64, opts *DeleteChatPhotoOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 
-	r, err := bot.Get("deleteChatPhoto", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("deleteChatPhoto", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
 
 	var b bool
 	return b, json.Unmarshal(r, &b)
+}
+
+// DeleteChatStickerSetOpts is the set of optional fields for Bot.DeleteChatStickerSet.
+type DeleteChatStickerSetOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // DeleteChatStickerSet Use this method to delete a group sticker set from a supergroup. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Use the field can_set_sticker_set optionally returned in getChat requests to check if the bot can use this method. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
 // https://core.telegram.org/bots/api#deletechatstickerset
-func (bot *Bot) DeleteChatStickerSet(chatId int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+func (bot *Bot) DeleteChatStickerSet(chatId int64, opts *DeleteChatStickerSetOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 
-	r, err := bot.Get("deleteChatStickerSet", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("deleteChatStickerSet", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -560,16 +864,35 @@ func (bot *Bot) DeleteChatStickerSet(chatId int64) (bool, error) {
 	return b, json.Unmarshal(r, &b)
 }
 
-// DeleteMessage Use this method to delete a message, including service messages, with the following limitations:- A message can only be deleted if it was sent less than 48 hours ago.- A dice message in a private chat can only be deleted if it was sent more than 24 hours ago.- Bots can delete outgoing messages in private chats, groups, and supergroups.- Bots can delete incoming messages in private chats.- Bots granted can_post_messages permissions can delete outgoing messages in channels.- If the bot is an administrator of a group, it can delete any message there.- If the bot has can_delete_messages permission in a supergroup or a channel, it can delete any message there.Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - message_id (type int64): Identifier of the message to delete
-// https://core.telegram.org/bots/api#deletemessage
-func (bot *Bot) DeleteMessage(chatId int64, messageId int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("message_id", strconv.FormatInt(messageId, 10))
+// DeleteMessageOpts is the set of optional fields for Bot.DeleteMessage.
+type DeleteMessageOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("deleteMessage", v)
+// DeleteMessage Use this method to delete a message, including service messages, with the following limitations:
+// - A message can only be deleted if it was sent less than 48 hours ago.
+// - A dice message in a private chat can only be deleted if it was sent more than 24 hours ago.
+// - Bots can delete outgoing messages in private chats, groups, and supergroups.
+// - Bots can delete incoming messages in private chats.
+// - Bots granted can_post_messages permissions can delete outgoing messages in channels.
+// - If the bot is an administrator of a group, it can delete any message there.
+// - If the bot has can_delete_messages permission in a supergroup or a channel, it can delete any message there.
+// Returns True on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - messageId (type int64): Identifier of the message to delete
+// https://core.telegram.org/bots/api#deletemessage
+func (bot *Bot) DeleteMessage(chatId int64, messageId int64, opts *DeleteMessageOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["message_id"] = strconv.FormatInt(messageId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("deleteMessage", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -584,23 +907,30 @@ type DeleteMyCommandsOpts struct {
 	Scope BotCommandScope
 	// A two-letter ISO 639-1 language code. If empty, commands will be applied to all users from the given scope, for whose language there are no dedicated commands
 	LanguageCode string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // DeleteMyCommands Use this method to delete the list of the bot's commands for the given scope and user language. After deletion, higher level commands will be shown to affected users. Returns True on success.
 // - opts (type DeleteMyCommandsOpts): All optional parameters.
 // https://core.telegram.org/bots/api#deletemycommands
 func (bot *Bot) DeleteMyCommands(opts *DeleteMyCommandsOpts) (bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	if opts != nil {
 		bs, err := json.Marshal(opts.Scope)
 		if err != nil {
 			return false, fmt.Errorf("failed to marshal field scope: %w", err)
 		}
-		v.Add("scope", string(bs))
-		v.Add("language_code", opts.LanguageCode)
+		v["scope"] = string(bs)
+		v["language_code"] = opts.LanguageCode
 	}
 
-	r, err := bot.Get("deleteMyCommands", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("deleteMyCommands", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -609,14 +939,25 @@ func (bot *Bot) DeleteMyCommands(opts *DeleteMyCommandsOpts) (bool, error) {
 	return b, json.Unmarshal(r, &b)
 }
 
+// DeleteStickerFromSetOpts is the set of optional fields for Bot.DeleteStickerFromSet.
+type DeleteStickerFromSetOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // DeleteStickerFromSet Use this method to delete a sticker from a set created by the bot. Returns True on success.
 // - sticker (type string): File identifier of the sticker
 // https://core.telegram.org/bots/api#deletestickerfromset
-func (bot *Bot) DeleteStickerFromSet(sticker string) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("sticker", sticker)
+func (bot *Bot) DeleteStickerFromSet(sticker string, opts *DeleteStickerFromSetOpts) (bool, error) {
+	v := map[string]string{}
+	v["sticker"] = sticker
 
-	r, err := bot.Get("deleteStickerFromSet", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("deleteStickerFromSet", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -629,18 +970,25 @@ func (bot *Bot) DeleteStickerFromSet(sticker string) (bool, error) {
 type DeleteWebhookOpts struct {
 	// Pass True to drop all pending updates
 	DropPendingUpdates bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // DeleteWebhook Use this method to remove webhook integration if you decide to switch back to getUpdates. Returns True on success.
 // - opts (type DeleteWebhookOpts): All optional parameters.
 // https://core.telegram.org/bots/api#deletewebhook
 func (bot *Bot) DeleteWebhook(opts *DeleteWebhookOpts) (bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	if opts != nil {
-		v.Add("drop_pending_updates", strconv.FormatBool(opts.DropPendingUpdates))
+		v["drop_pending_updates"] = strconv.FormatBool(opts.DropPendingUpdates)
 	}
 
-	r, err := bot.Get("deleteWebhook", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("deleteWebhook", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -655,33 +1003,40 @@ type EditChatInviteLinkOpts struct {
 	Name string
 	// Point in time (Unix timestamp) when the link will expire
 	ExpireDate int64
-	// Maximum number of users that can be members of the chat simultaneously after joining the chat via this invite link; 1-99999
+	// The maximum number of users that can be members of the chat simultaneously after joining the chat via this invite link; 1-99999
 	MemberLimit int64
 	// True, if users joining the chat via the link need to be approved by chat administrators. If True, member_limit can't be specified
 	CreatesJoinRequest bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // EditChatInviteLink Use this method to edit a non-primary invite link created by the bot. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns the edited invite link as a ChatInviteLink object.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - invite_link (type string): The invite link to edit
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - inviteLink (type string): The invite link to edit
 // - opts (type EditChatInviteLinkOpts): All optional parameters.
 // https://core.telegram.org/bots/api#editchatinvitelink
 func (bot *Bot) EditChatInviteLink(chatId int64, inviteLink string, opts *EditChatInviteLinkOpts) (*ChatInviteLink, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("invite_link", inviteLink)
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["invite_link"] = inviteLink
 	if opts != nil {
-		v.Add("name", opts.Name)
+		v["name"] = opts.Name
 		if opts.ExpireDate != 0 {
-			v.Add("expire_date", strconv.FormatInt(opts.ExpireDate, 10))
+			v["expire_date"] = strconv.FormatInt(opts.ExpireDate, 10)
 		}
 		if opts.MemberLimit != 0 {
-			v.Add("member_limit", strconv.FormatInt(opts.MemberLimit, 10))
+			v["member_limit"] = strconv.FormatInt(opts.MemberLimit, 10)
 		}
-		v.Add("creates_join_request", strconv.FormatBool(opts.CreatesJoinRequest))
+		v["creates_join_request"] = strconv.FormatBool(opts.CreatesJoinRequest)
 	}
 
-	r, err := bot.Get("editChatInviteLink", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("editChatInviteLink", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -706,38 +1061,45 @@ type EditMessageCaptionOpts struct {
 	CaptionEntities []MessageEntity
 	// A JSON-serialized object for an inline keyboard.
 	ReplyMarkup InlineKeyboardMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // EditMessageCaption Use this method to edit captions of messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
 // - opts (type EditMessageCaptionOpts): All optional parameters.
 // https://core.telegram.org/bots/api#editmessagecaption
 func (bot *Bot) EditMessageCaption(opts *EditMessageCaptionOpts) (*Message, bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	if opts != nil {
 		if opts.ChatId != 0 {
-			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
 		}
 		if opts.MessageId != 0 {
-			v.Add("message_id", strconv.FormatInt(opts.MessageId, 10))
+			v["message_id"] = strconv.FormatInt(opts.MessageId, 10)
 		}
-		v.Add("inline_message_id", opts.InlineMessageId)
-		v.Add("caption", opts.Caption)
-		v.Add("parse_mode", opts.ParseMode)
+		v["inline_message_id"] = opts.InlineMessageId
+		v["caption"] = opts.Caption
+		v["parse_mode"] = opts.ParseMode
 		if opts.CaptionEntities != nil {
 			bs, err := json.Marshal(opts.CaptionEntities)
 			if err != nil {
 				return nil, false, fmt.Errorf("failed to marshal field caption_entities: %w", err)
 			}
-			v.Add("caption_entities", string(bs))
+			v["caption_entities"] = string(bs)
 		}
 		bs, err := json.Marshal(opts.ReplyMarkup)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 		}
-		v.Add("reply_markup", string(bs))
+		v["reply_markup"] = string(bs)
 	}
 
-	r, err := bot.Get("editMessageCaption", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("editMessageCaption", v, nil, reqOpts)
 	if err != nil {
 		return nil, false, err
 	}
@@ -766,10 +1128,12 @@ type EditMessageLiveLocationOpts struct {
 	HorizontalAccuracy float64
 	// Direction in which the user is moving, in degrees. Must be between 1 and 360 if specified.
 	Heading int64
-	// Maximum distance for proximity alerts about approaching another chat member, in meters. Must be between 1 and 100000 if specified.
+	// The maximum distance for proximity alerts about approaching another chat member, in meters. Must be between 1 and 100000 if specified.
 	ProximityAlertRadius int64
 	// A JSON-serialized object for a new inline keyboard.
 	ReplyMarkup InlineKeyboardMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // EditMessageLiveLocation Use this method to edit live location messages. A location can be edited until its live_period expires or editing is explicitly disabled by a call to stopMessageLiveLocation. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
@@ -778,34 +1142,39 @@ type EditMessageLiveLocationOpts struct {
 // - opts (type EditMessageLiveLocationOpts): All optional parameters.
 // https://core.telegram.org/bots/api#editmessagelivelocation
 func (bot *Bot) EditMessageLiveLocation(latitude float64, longitude float64, opts *EditMessageLiveLocationOpts) (*Message, bool, error) {
-	v := urlLib.Values{}
-	v.Add("latitude", strconv.FormatFloat(latitude, 'f', -1, 64))
-	v.Add("longitude", strconv.FormatFloat(longitude, 'f', -1, 64))
+	v := map[string]string{}
+	v["latitude"] = strconv.FormatFloat(latitude, 'f', -1, 64)
+	v["longitude"] = strconv.FormatFloat(longitude, 'f', -1, 64)
 	if opts != nil {
 		if opts.ChatId != 0 {
-			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
 		}
 		if opts.MessageId != 0 {
-			v.Add("message_id", strconv.FormatInt(opts.MessageId, 10))
+			v["message_id"] = strconv.FormatInt(opts.MessageId, 10)
 		}
-		v.Add("inline_message_id", opts.InlineMessageId)
+		v["inline_message_id"] = opts.InlineMessageId
 		if opts.HorizontalAccuracy != 0.0 {
-			v.Add("horizontal_accuracy", strconv.FormatFloat(opts.HorizontalAccuracy, 'f', -1, 64))
+			v["horizontal_accuracy"] = strconv.FormatFloat(opts.HorizontalAccuracy, 'f', -1, 64)
 		}
 		if opts.Heading != 0 {
-			v.Add("heading", strconv.FormatInt(opts.Heading, 10))
+			v["heading"] = strconv.FormatInt(opts.Heading, 10)
 		}
 		if opts.ProximityAlertRadius != 0 {
-			v.Add("proximity_alert_radius", strconv.FormatInt(opts.ProximityAlertRadius, 10))
+			v["proximity_alert_radius"] = strconv.FormatInt(opts.ProximityAlertRadius, 10)
 		}
 		bs, err := json.Marshal(opts.ReplyMarkup)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 		}
-		v.Add("reply_markup", string(bs))
+		v["reply_markup"] = string(bs)
 	}
 
-	r, err := bot.Get("editMessageLiveLocation", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("editMessageLiveLocation", v, nil, reqOpts)
 	if err != nil {
 		return nil, false, err
 	}
@@ -832,6 +1201,8 @@ type EditMessageMediaOpts struct {
 	InlineMessageId string
 	// A JSON-serialized object for a new inline keyboard.
 	ReplyMarkup InlineKeyboardMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // EditMessageMedia Use this method to edit animation, audio, document, photo, or video messages. If a message is part of a message album, then it can be edited only to an audio for audio albums, only to a document for document albums and to a photo or a video otherwise. When an inline message is edited, a new file can't be uploaded; use a previously uploaded file via its file_id or specify a URL. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
@@ -839,29 +1210,34 @@ type EditMessageMediaOpts struct {
 // - opts (type EditMessageMediaOpts): All optional parameters.
 // https://core.telegram.org/bots/api#editmessagemedia
 func (bot *Bot) EditMessageMedia(media InputMedia, opts *EditMessageMediaOpts) (*Message, bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
 	inputMediaBs, err := media.InputMediaParams("media", data)
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to marshal field media: %w", err)
 	}
-	v.Add("media", string(inputMediaBs))
+	v["media"] = string(inputMediaBs)
 	if opts != nil {
 		if opts.ChatId != 0 {
-			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
 		}
 		if opts.MessageId != 0 {
-			v.Add("message_id", strconv.FormatInt(opts.MessageId, 10))
+			v["message_id"] = strconv.FormatInt(opts.MessageId, 10)
 		}
-		v.Add("inline_message_id", opts.InlineMessageId)
+		v["inline_message_id"] = opts.InlineMessageId
 		bs, err := json.Marshal(opts.ReplyMarkup)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 		}
-		v.Add("reply_markup", string(bs))
+		v["reply_markup"] = string(bs)
 	}
 
-	r, err := bot.Post("editMessageMedia", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("editMessageMedia", v, data, reqOpts)
 	if err != nil {
 		return nil, false, err
 	}
@@ -888,29 +1264,36 @@ type EditMessageReplyMarkupOpts struct {
 	InlineMessageId string
 	// A JSON-serialized object for an inline keyboard.
 	ReplyMarkup InlineKeyboardMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // EditMessageReplyMarkup Use this method to edit only the reply markup of messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
 // - opts (type EditMessageReplyMarkupOpts): All optional parameters.
 // https://core.telegram.org/bots/api#editmessagereplymarkup
 func (bot *Bot) EditMessageReplyMarkup(opts *EditMessageReplyMarkupOpts) (*Message, bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	if opts != nil {
 		if opts.ChatId != 0 {
-			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
 		}
 		if opts.MessageId != 0 {
-			v.Add("message_id", strconv.FormatInt(opts.MessageId, 10))
+			v["message_id"] = strconv.FormatInt(opts.MessageId, 10)
 		}
-		v.Add("inline_message_id", opts.InlineMessageId)
+		v["inline_message_id"] = opts.InlineMessageId
 		bs, err := json.Marshal(opts.ReplyMarkup)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 		}
-		v.Add("reply_markup", string(bs))
+		v["reply_markup"] = string(bs)
 	}
 
-	r, err := bot.Get("editMessageReplyMarkup", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("editMessageReplyMarkup", v, nil, reqOpts)
 	if err != nil {
 		return nil, false, err
 	}
@@ -943,6 +1326,8 @@ type EditMessageTextOpts struct {
 	DisableWebPagePreview bool
 	// A JSON-serialized object for an inline keyboard.
 	ReplyMarkup InlineKeyboardMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // EditMessageText Use this method to edit text and game messages. On success, if the edited message is not an inline message, the edited Message is returned, otherwise True is returned.
@@ -950,33 +1335,38 @@ type EditMessageTextOpts struct {
 // - opts (type EditMessageTextOpts): All optional parameters.
 // https://core.telegram.org/bots/api#editmessagetext
 func (bot *Bot) EditMessageText(text string, opts *EditMessageTextOpts) (*Message, bool, error) {
-	v := urlLib.Values{}
-	v.Add("text", text)
+	v := map[string]string{}
+	v["text"] = text
 	if opts != nil {
 		if opts.ChatId != 0 {
-			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
 		}
 		if opts.MessageId != 0 {
-			v.Add("message_id", strconv.FormatInt(opts.MessageId, 10))
+			v["message_id"] = strconv.FormatInt(opts.MessageId, 10)
 		}
-		v.Add("inline_message_id", opts.InlineMessageId)
-		v.Add("parse_mode", opts.ParseMode)
+		v["inline_message_id"] = opts.InlineMessageId
+		v["parse_mode"] = opts.ParseMode
 		if opts.Entities != nil {
 			bs, err := json.Marshal(opts.Entities)
 			if err != nil {
 				return nil, false, fmt.Errorf("failed to marshal field entities: %w", err)
 			}
-			v.Add("entities", string(bs))
+			v["entities"] = string(bs)
 		}
-		v.Add("disable_web_page_preview", strconv.FormatBool(opts.DisableWebPagePreview))
+		v["disable_web_page_preview"] = strconv.FormatBool(opts.DisableWebPagePreview)
 		bs, err := json.Marshal(opts.ReplyMarkup)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 		}
-		v.Add("reply_markup", string(bs))
+		v["reply_markup"] = string(bs)
 	}
 
-	r, err := bot.Get("editMessageText", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("editMessageText", v, nil, reqOpts)
 	if err != nil {
 		return nil, false, err
 	}
@@ -993,14 +1383,25 @@ func (bot *Bot) EditMessageText(text string, opts *EditMessageTextOpts) (*Messag
 
 }
 
-// ExportChatInviteLink Use this method to generate a new primary invite link for a chat; any previously generated primary link is revoked. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns the new invite link as String on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// https://core.telegram.org/bots/api#exportchatinvitelink
-func (bot *Bot) ExportChatInviteLink(chatId int64) (string, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+// ExportChatInviteLinkOpts is the set of optional fields for Bot.ExportChatInviteLink.
+type ExportChatInviteLinkOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("exportChatInviteLink", v)
+// ExportChatInviteLink Use this method to generate a new primary invite link for a chat; any previously generated primary link is revoked. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns the new invite link as String on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// https://core.telegram.org/bots/api#exportchatinvitelink
+func (bot *Bot) ExportChatInviteLink(chatId int64, opts *ExportChatInviteLinkOpts) (string, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("exportChatInviteLink", v, nil, reqOpts)
 	if err != nil {
 		return "", err
 	}
@@ -1015,25 +1416,32 @@ type ForwardMessageOpts struct {
 	DisableNotification bool
 	// Protects the contents of the forwarded message from forwarding and saving
 	ProtectContent bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // ForwardMessage Use this method to forward messages of any kind. Service messages can't be forwarded. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - from_chat_id (type int64): Unique identifier for the chat where the original message was sent (or channel username in the format @channelusername)
-// - message_id (type int64): Message identifier in the chat specified in from_chat_id
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - fromChatId (type int64): Unique identifier for the chat where the original message was sent (or channel username in the format @channelusername)
+// - messageId (type int64): Message identifier in the chat specified in from_chat_id
 // - opts (type ForwardMessageOpts): All optional parameters.
 // https://core.telegram.org/bots/api#forwardmessage
 func (bot *Bot) ForwardMessage(chatId int64, fromChatId int64, messageId int64, opts *ForwardMessageOpts) (*Message, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("from_chat_id", strconv.FormatInt(fromChatId, 10))
-	v.Add("message_id", strconv.FormatInt(messageId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["from_chat_id"] = strconv.FormatInt(fromChatId, 10)
+	v["message_id"] = strconv.FormatInt(messageId, 10)
 	if opts != nil {
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 	}
 
-	r, err := bot.Get("forwardMessage", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("forwardMessage", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1042,14 +1450,25 @@ func (bot *Bot) ForwardMessage(chatId int64, fromChatId int64, messageId int64, 
 	return &m, json.Unmarshal(r, &m)
 }
 
-// GetChat Use this method to get up to date information about the chat (current name of the user for one-on-one conversations, current username of a user, group or channel, etc.). Returns a Chat object on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-// https://core.telegram.org/bots/api#getchat
-func (bot *Bot) GetChat(chatId int64) (*Chat, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+// GetChatOpts is the set of optional fields for Bot.GetChat.
+type GetChatOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("getChat", v)
+// GetChat Use this method to get up to date information about the chat (current name of the user for one-on-one conversations, current username of a user, group or channel, etc.). Returns a Chat object on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+// https://core.telegram.org/bots/api#getchat
+func (bot *Bot) GetChat(chatId int64, opts *GetChatOpts) (*Chat, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getChat", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1058,14 +1477,25 @@ func (bot *Bot) GetChat(chatId int64) (*Chat, error) {
 	return &c, json.Unmarshal(r, &c)
 }
 
-// GetChatAdministrators Use this method to get a list of administrators in a chat. On success, returns an Array of ChatMember objects that contains information about all chat administrators except other bots. If the chat is a group or a supergroup and no administrators were appointed, only the creator will be returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-// https://core.telegram.org/bots/api#getchatadministrators
-func (bot *Bot) GetChatAdministrators(chatId int64) ([]ChatMember, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+// GetChatAdministratorsOpts is the set of optional fields for Bot.GetChatAdministrators.
+type GetChatAdministratorsOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("getChatAdministrators", v)
+// GetChatAdministrators Use this method to get a list of administrators in a chat, which aren't bots. Returns an Array of ChatMember objects.
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+// https://core.telegram.org/bots/api#getchatadministrators
+func (bot *Bot) GetChatAdministrators(chatId int64, opts *GetChatAdministratorsOpts) ([]ChatMember, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getChatAdministrators", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1073,16 +1503,27 @@ func (bot *Bot) GetChatAdministrators(chatId int64) ([]ChatMember, error) {
 	return unmarshalChatMemberArray(r)
 }
 
-// GetChatMember Use this method to get information about a member of a chat. Returns a ChatMember object on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-// - user_id (type int64): Unique identifier of the target user
-// https://core.telegram.org/bots/api#getchatmember
-func (bot *Bot) GetChatMember(chatId int64, userId int64) (ChatMember, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+// GetChatMemberOpts is the set of optional fields for Bot.GetChatMember.
+type GetChatMemberOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("getChatMember", v)
+// GetChatMember Use this method to get information about a member of a chat. Returns a ChatMember object on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+// - userId (type int64): Unique identifier of the target user
+// https://core.telegram.org/bots/api#getchatmember
+func (bot *Bot) GetChatMember(chatId int64, userId int64, opts *GetChatMemberOpts) (ChatMember, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["user_id"] = strconv.FormatInt(userId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getChatMember", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1090,14 +1531,25 @@ func (bot *Bot) GetChatMember(chatId int64, userId int64) (ChatMember, error) {
 	return unmarshalChatMember(r)
 }
 
-// GetChatMemberCount Use this method to get the number of members in a chat. Returns Int on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-// https://core.telegram.org/bots/api#getchatmembercount
-func (bot *Bot) GetChatMemberCount(chatId int64) (int64, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+// GetChatMemberCountOpts is the set of optional fields for Bot.GetChatMemberCount.
+type GetChatMemberCountOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("getChatMemberCount", v)
+// GetChatMemberCount Use this method to get the number of members in a chat. Returns Int on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+// https://core.telegram.org/bots/api#getchatmembercount
+func (bot *Bot) GetChatMemberCount(chatId int64, opts *GetChatMemberCountOpts) (int64, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getChatMemberCount", v, nil, reqOpts)
 	if err != nil {
 		return 0, err
 	}
@@ -1106,15 +1558,91 @@ func (bot *Bot) GetChatMemberCount(chatId int64) (int64, error) {
 	return i, json.Unmarshal(r, &i)
 }
 
-// GetFile Use this method to get basic info about a file and prepare it for downloading. For the moment, bots can download files of up to 20MB in size. On success, a File object is returned. The file can then be downloaded via the link https://api.telegram.org/file/bot<token>/<file_path>, where <file_path> is taken from the response. It is guaranteed that the link will be valid for at least 1 hour. When the link expires, a new one can be requested by calling getFile again.
-// Note: This function may not preserve the original file name and MIME type. You should save the file's MIME type and name (if available) when the File object is received.
-// - file_id (type string): File identifier to get info about
-// https://core.telegram.org/bots/api#getfile
-func (bot *Bot) GetFile(fileId string) (*File, error) {
-	v := urlLib.Values{}
-	v.Add("file_id", fileId)
+// GetChatMenuButtonOpts is the set of optional fields for Bot.GetChatMenuButton.
+type GetChatMenuButtonOpts struct {
+	// Unique identifier for the target private chat. If not specified, default bot's menu button will be returned
+	ChatId int64
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("getFile", v)
+// GetChatMenuButton Use this method to get the current value of the bot's menu button in a private chat, or the default menu button. Returns MenuButton on success.
+// - opts (type GetChatMenuButtonOpts): All optional parameters.
+// https://core.telegram.org/bots/api#getchatmenubutton
+func (bot *Bot) GetChatMenuButton(opts *GetChatMenuButtonOpts) (MenuButton, error) {
+	v := map[string]string{}
+	if opts != nil {
+		if opts.ChatId != 0 {
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
+		}
+	}
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getChatMenuButton", v, nil, reqOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	return unmarshalMenuButton(r)
+}
+
+// GetCustomEmojiStickersOpts is the set of optional fields for Bot.GetCustomEmojiStickers.
+type GetCustomEmojiStickersOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
+// GetCustomEmojiStickers Use this method to get information about custom emoji stickers by their identifiers. Returns an Array of Sticker objects.
+// - customEmojiIds (type []string): List of custom emoji identifiers. At most 200 custom emoji identifiers can be specified.
+// https://core.telegram.org/bots/api#getcustomemojistickers
+func (bot *Bot) GetCustomEmojiStickers(customEmojiIds []string, opts *GetCustomEmojiStickersOpts) ([]Sticker, error) {
+	v := map[string]string{}
+	if customEmojiIds != nil {
+		bs, err := json.Marshal(customEmojiIds)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal field custom_emoji_ids: %w", err)
+		}
+		v["custom_emoji_ids"] = string(bs)
+	}
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getCustomEmojiStickers", v, nil, reqOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	var s []Sticker
+	return s, json.Unmarshal(r, &s)
+}
+
+// GetFileOpts is the set of optional fields for Bot.GetFile.
+type GetFileOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
+// GetFile Use this method to get basic information about a file and prepare it for downloading. For the moment, bots can download files of up to 20MB in size. On success, a File object is returned. The file can then be downloaded via the link https://api.telegram.org/file/bot<token>/<file_path>, where <file_path> is taken from the response. It is guaranteed that the link will be valid for at least 1 hour. When the link expires, a new one can be requested by calling getFile again.
+// Note: This function may not preserve the original file name and MIME type. You should save the file's MIME type and name (if available) when the File object is received.
+// - fileId (type string): File identifier to get information about
+// https://core.telegram.org/bots/api#getfile
+func (bot *Bot) GetFile(fileId string, opts *GetFileOpts) (*File, error) {
+	v := map[string]string{}
+	v["file_id"] = fileId
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getFile", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1131,26 +1659,33 @@ type GetGameHighScoresOpts struct {
 	MessageId int64
 	// Required if chat_id and message_id are not specified. Identifier of the inline message
 	InlineMessageId string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// GetGameHighScores Use this method to get data for high score tables. Will return the score of the specified user and several of their neighbors in a game. On success, returns an Array of GameHighScore objects.
-// - user_id (type int64): Target user id
+// GetGameHighScores Use this method to get data for high score tables. Will return the score of the specified user and several of their neighbors in a game. Returns an Array of GameHighScore objects.
+// - userId (type int64): Target user id
 // - opts (type GetGameHighScoresOpts): All optional parameters.
 // https://core.telegram.org/bots/api#getgamehighscores
 func (bot *Bot) GetGameHighScores(userId int64, opts *GetGameHighScoresOpts) ([]GameHighScore, error) {
-	v := urlLib.Values{}
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+	v := map[string]string{}
+	v["user_id"] = strconv.FormatInt(userId, 10)
 	if opts != nil {
 		if opts.ChatId != 0 {
-			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
 		}
 		if opts.MessageId != 0 {
-			v.Add("message_id", strconv.FormatInt(opts.MessageId, 10))
+			v["message_id"] = strconv.FormatInt(opts.MessageId, 10)
 		}
-		v.Add("inline_message_id", opts.InlineMessageId)
+		v["inline_message_id"] = opts.InlineMessageId
 	}
 
-	r, err := bot.Get("getGameHighScores", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getGameHighScores", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1159,12 +1694,23 @@ func (bot *Bot) GetGameHighScores(userId int64, opts *GetGameHighScoresOpts) ([]
 	return g, json.Unmarshal(r, &g)
 }
 
+// GetMeOpts is the set of optional fields for Bot.GetMe.
+type GetMeOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // GetMe A simple method for testing your bot's authentication token. Requires no parameters. Returns basic information about the bot in form of a User object.
 // https://core.telegram.org/bots/api#getme
-func (bot *Bot) GetMe() (*User, error) {
-	v := urlLib.Values{}
+func (bot *Bot) GetMe(opts *GetMeOpts) (*User, error) {
+	v := map[string]string{}
 
-	r, err := bot.Get("getMe", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getMe", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1179,23 +1725,30 @@ type GetMyCommandsOpts struct {
 	Scope BotCommandScope
 	// A two-letter ISO 639-1 language code or an empty string
 	LanguageCode string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// GetMyCommands Use this method to get the current list of the bot's commands for the given scope and user language. Returns Array of BotCommand on success. If commands aren't set, an empty list is returned.
+// GetMyCommands Use this method to get the current list of the bot's commands for the given scope and user language. Returns an Array of BotCommand objects. If commands aren't set, an empty list is returned.
 // - opts (type GetMyCommandsOpts): All optional parameters.
 // https://core.telegram.org/bots/api#getmycommands
 func (bot *Bot) GetMyCommands(opts *GetMyCommandsOpts) ([]BotCommand, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	if opts != nil {
 		bs, err := json.Marshal(opts.Scope)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal field scope: %w", err)
 		}
-		v.Add("scope", string(bs))
-		v.Add("language_code", opts.LanguageCode)
+		v["scope"] = string(bs)
+		v["language_code"] = opts.LanguageCode
 	}
 
-	r, err := bot.Get("getMyCommands", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getMyCommands", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1204,14 +1757,56 @@ func (bot *Bot) GetMyCommands(opts *GetMyCommandsOpts) ([]BotCommand, error) {
 	return b, json.Unmarshal(r, &b)
 }
 
+// GetMyDefaultAdministratorRightsOpts is the set of optional fields for Bot.GetMyDefaultAdministratorRights.
+type GetMyDefaultAdministratorRightsOpts struct {
+	// Pass True to get default administrator rights of the bot in channels. Otherwise, default administrator rights of the bot for groups and supergroups will be returned.
+	ForChannels bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
+// GetMyDefaultAdministratorRights Use this method to get the current default administrator rights of the bot. Returns ChatAdministratorRights on success.
+// - opts (type GetMyDefaultAdministratorRightsOpts): All optional parameters.
+// https://core.telegram.org/bots/api#getmydefaultadministratorrights
+func (bot *Bot) GetMyDefaultAdministratorRights(opts *GetMyDefaultAdministratorRightsOpts) (*ChatAdministratorRights, error) {
+	v := map[string]string{}
+	if opts != nil {
+		v["for_channels"] = strconv.FormatBool(opts.ForChannels)
+	}
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getMyDefaultAdministratorRights", v, nil, reqOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	var c ChatAdministratorRights
+	return &c, json.Unmarshal(r, &c)
+}
+
+// GetStickerSetOpts is the set of optional fields for Bot.GetStickerSet.
+type GetStickerSetOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // GetStickerSet Use this method to get a sticker set. On success, a StickerSet object is returned.
 // - name (type string): Name of the sticker set
 // https://core.telegram.org/bots/api#getstickerset
-func (bot *Bot) GetStickerSet(name string) (*StickerSet, error) {
-	v := urlLib.Values{}
-	v.Add("name", name)
+func (bot *Bot) GetStickerSet(name string, opts *GetStickerSetOpts) (*StickerSet, error) {
+	v := map[string]string{}
+	v["name"] = name
 
-	r, err := bot.Get("getStickerSet", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getStickerSet", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1230,33 +1825,40 @@ type GetUpdatesOpts struct {
 	Timeout int64
 	// A JSON-serialized list of the update types you want your bot to receive. For example, specify ["message", "edited_channel_post", "callback_query"] to only receive updates of these types. See Update for a complete list of available update types. Specify an empty list to receive all update types except chat_member (default). If not specified, the previous setting will be used. Please note that this parameter doesn't affect updates created before the call to the getUpdates, so unwanted updates may be received for a short period of time.
 	AllowedUpdates []string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// GetUpdates Use this method to receive incoming updates using long polling (wiki). An Array of Update objects is returned.
+// GetUpdates Use this method to receive incoming updates using long polling (wiki). Returns an Array of Update objects.
 // - opts (type GetUpdatesOpts): All optional parameters.
 // https://core.telegram.org/bots/api#getupdates
 func (bot *Bot) GetUpdates(opts *GetUpdatesOpts) ([]Update, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	if opts != nil {
 		if opts.Offset != 0 {
-			v.Add("offset", strconv.FormatInt(opts.Offset, 10))
+			v["offset"] = strconv.FormatInt(opts.Offset, 10)
 		}
 		if opts.Limit != 0 {
-			v.Add("limit", strconv.FormatInt(opts.Limit, 10))
+			v["limit"] = strconv.FormatInt(opts.Limit, 10)
 		}
 		if opts.Timeout != 0 {
-			v.Add("timeout", strconv.FormatInt(opts.Timeout, 10))
+			v["timeout"] = strconv.FormatInt(opts.Timeout, 10)
 		}
 		if opts.AllowedUpdates != nil {
 			bs, err := json.Marshal(opts.AllowedUpdates)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field allowed_updates: %w", err)
 			}
-			v.Add("allowed_updates", string(bs))
+			v["allowed_updates"] = string(bs)
 		}
 	}
 
-	r, err := bot.Get("getUpdates", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getUpdates", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1271,25 +1873,32 @@ type GetUserProfilePhotosOpts struct {
 	Offset int64
 	// Limits the number of photos to be retrieved. Values between 1-100 are accepted. Defaults to 100.
 	Limit int64
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // GetUserProfilePhotos Use this method to get a list of profile pictures for a user. Returns a UserProfilePhotos object.
-// - user_id (type int64): Unique identifier of the target user
+// - userId (type int64): Unique identifier of the target user
 // - opts (type GetUserProfilePhotosOpts): All optional parameters.
 // https://core.telegram.org/bots/api#getuserprofilephotos
 func (bot *Bot) GetUserProfilePhotos(userId int64, opts *GetUserProfilePhotosOpts) (*UserProfilePhotos, error) {
-	v := urlLib.Values{}
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+	v := map[string]string{}
+	v["user_id"] = strconv.FormatInt(userId, 10)
 	if opts != nil {
 		if opts.Offset != 0 {
-			v.Add("offset", strconv.FormatInt(opts.Offset, 10))
+			v["offset"] = strconv.FormatInt(opts.Offset, 10)
 		}
 		if opts.Limit != 0 {
-			v.Add("limit", strconv.FormatInt(opts.Limit, 10))
+			v["limit"] = strconv.FormatInt(opts.Limit, 10)
 		}
 	}
 
-	r, err := bot.Get("getUserProfilePhotos", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getUserProfilePhotos", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1298,12 +1907,23 @@ func (bot *Bot) GetUserProfilePhotos(userId int64, opts *GetUserProfilePhotosOpt
 	return &u, json.Unmarshal(r, &u)
 }
 
+// GetWebhookInfoOpts is the set of optional fields for Bot.GetWebhookInfo.
+type GetWebhookInfoOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // GetWebhookInfo Use this method to get current webhook status. Requires no parameters. On success, returns a WebhookInfo object. If the bot is using getUpdates, will return an object with the url field empty.
 // https://core.telegram.org/bots/api#getwebhookinfo
-func (bot *Bot) GetWebhookInfo() (*WebhookInfo, error) {
-	v := urlLib.Values{}
+func (bot *Bot) GetWebhookInfo(opts *GetWebhookInfoOpts) (*WebhookInfo, error) {
+	v := map[string]string{}
 
-	r, err := bot.Get("getWebhookInfo", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("getWebhookInfo", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1312,14 +1932,25 @@ func (bot *Bot) GetWebhookInfo() (*WebhookInfo, error) {
 	return &w, json.Unmarshal(r, &w)
 }
 
-// LeaveChat Use this method for your bot to leave a group, supergroup or channel. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
-// https://core.telegram.org/bots/api#leavechat
-func (bot *Bot) LeaveChat(chatId int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+// LeaveChatOpts is the set of optional fields for Bot.LeaveChat.
+type LeaveChatOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("leaveChat", v)
+// LeaveChat Use this method for your bot to leave a group, supergroup or channel. Returns True on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup or channel (in the format @channelusername)
+// https://core.telegram.org/bots/api#leavechat
+func (bot *Bot) LeaveChat(chatId int64, opts *LeaveChatOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("leaveChat", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -1328,12 +1959,23 @@ func (bot *Bot) LeaveChat(chatId int64) (bool, error) {
 	return b, json.Unmarshal(r, &b)
 }
 
+// LogOutOpts is the set of optional fields for Bot.LogOut.
+type LogOutOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // LogOut Use this method to log out from the cloud Bot API server before launching the bot locally. You must log out the bot before running it locally, otherwise there is no guarantee that the bot will receive updates. After a successful call, you can immediately log in on a local server, but will not be able to log in back to the cloud Bot API server for 10 minutes. Returns True on success. Requires no parameters.
 // https://core.telegram.org/bots/api#logout
-func (bot *Bot) LogOut() (bool, error) {
-	v := urlLib.Values{}
+func (bot *Bot) LogOut(opts *LogOutOpts) (bool, error) {
+	v := map[string]string{}
 
-	r, err := bot.Get("logOut", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("logOut", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -1344,24 +1986,31 @@ func (bot *Bot) LogOut() (bool, error) {
 
 // PinChatMessageOpts is the set of optional fields for Bot.PinChatMessage.
 type PinChatMessageOpts struct {
-	// Pass True, if it is not necessary to send a notification to all chat members about the new pinned message. Notifications are always disabled in channels and private chats.
+	// Pass True if it is not necessary to send a notification to all chat members about the new pinned message. Notifications are always disabled in channels and private chats.
 	DisableNotification bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // PinChatMessage Use this method to add a message to the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - message_id (type int64): Identifier of a message to pin
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - messageId (type int64): Identifier of a message to pin
 // - opts (type PinChatMessageOpts): All optional parameters.
 // https://core.telegram.org/bots/api#pinchatmessage
 func (bot *Bot) PinChatMessage(chatId int64, messageId int64, opts *PinChatMessageOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("message_id", strconv.FormatInt(messageId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["message_id"] = strconv.FormatInt(messageId, 10)
 	if opts != nil {
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
 	}
 
-	r, err := bot.Get("pinChatMessage", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("pinChatMessage", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -1372,54 +2021,61 @@ func (bot *Bot) PinChatMessage(chatId int64, messageId int64, opts *PinChatMessa
 
 // PromoteChatMemberOpts is the set of optional fields for Bot.PromoteChatMember.
 type PromoteChatMemberOpts struct {
-	// Pass True, if the administrator's presence in the chat is hidden
+	// Pass True if the administrator's presence in the chat is hidden
 	IsAnonymous bool
-	// Pass True, if the administrator can access the chat event log, chat statistics, message statistics in channels, see channel members, see anonymous administrators in supergroups and ignore slow mode. Implied by any other administrator privilege
+	// Pass True if the administrator can access the chat event log, chat statistics, message statistics in channels, see channel members, see anonymous administrators in supergroups and ignore slow mode. Implied by any other administrator privilege
 	CanManageChat bool
-	// Pass True, if the administrator can create channel posts, channels only
+	// Pass True if the administrator can create channel posts, channels only
 	CanPostMessages bool
-	// Pass True, if the administrator can edit messages of other users and can pin messages, channels only
+	// Pass True if the administrator can edit messages of other users and can pin messages, channels only
 	CanEditMessages bool
-	// Pass True, if the administrator can delete messages of other users
+	// Pass True if the administrator can delete messages of other users
 	CanDeleteMessages bool
-	// Pass True, if the administrator can manage voice chats
-	CanManageVoiceChats bool
-	// Pass True, if the administrator can restrict, ban or unban chat members
+	// Pass True if the administrator can manage video chats
+	CanManageVideoChats bool
+	// Pass True if the administrator can restrict, ban or unban chat members
 	CanRestrictMembers bool
-	// Pass True, if the administrator can add new administrators with a subset of their own privileges or demote administrators that he has promoted, directly or indirectly (promoted by administrators that were appointed by him)
+	// Pass True if the administrator can add new administrators with a subset of their own privileges or demote administrators that he has promoted, directly or indirectly (promoted by administrators that were appointed by him)
 	CanPromoteMembers bool
-	// Pass True, if the administrator can change chat title, photo and other settings
+	// Pass True if the administrator can change chat title, photo and other settings
 	CanChangeInfo bool
-	// Pass True, if the administrator can invite new users to the chat
+	// Pass True if the administrator can invite new users to the chat
 	CanInviteUsers bool
-	// Pass True, if the administrator can pin messages, supergroups only
+	// Pass True if the administrator can pin messages, supergroups only
 	CanPinMessages bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // PromoteChatMember Use this method to promote or demote a user in a supergroup or a channel. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Pass False for all boolean parameters to demote a user. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - user_id (type int64): Unique identifier of the target user
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - userId (type int64): Unique identifier of the target user
 // - opts (type PromoteChatMemberOpts): All optional parameters.
 // https://core.telegram.org/bots/api#promotechatmember
 func (bot *Bot) PromoteChatMember(chatId int64, userId int64, opts *PromoteChatMemberOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["user_id"] = strconv.FormatInt(userId, 10)
 	if opts != nil {
-		v.Add("is_anonymous", strconv.FormatBool(opts.IsAnonymous))
-		v.Add("can_manage_chat", strconv.FormatBool(opts.CanManageChat))
-		v.Add("can_post_messages", strconv.FormatBool(opts.CanPostMessages))
-		v.Add("can_edit_messages", strconv.FormatBool(opts.CanEditMessages))
-		v.Add("can_delete_messages", strconv.FormatBool(opts.CanDeleteMessages))
-		v.Add("can_manage_voice_chats", strconv.FormatBool(opts.CanManageVoiceChats))
-		v.Add("can_restrict_members", strconv.FormatBool(opts.CanRestrictMembers))
-		v.Add("can_promote_members", strconv.FormatBool(opts.CanPromoteMembers))
-		v.Add("can_change_info", strconv.FormatBool(opts.CanChangeInfo))
-		v.Add("can_invite_users", strconv.FormatBool(opts.CanInviteUsers))
-		v.Add("can_pin_messages", strconv.FormatBool(opts.CanPinMessages))
+		v["is_anonymous"] = strconv.FormatBool(opts.IsAnonymous)
+		v["can_manage_chat"] = strconv.FormatBool(opts.CanManageChat)
+		v["can_post_messages"] = strconv.FormatBool(opts.CanPostMessages)
+		v["can_edit_messages"] = strconv.FormatBool(opts.CanEditMessages)
+		v["can_delete_messages"] = strconv.FormatBool(opts.CanDeleteMessages)
+		v["can_manage_video_chats"] = strconv.FormatBool(opts.CanManageVideoChats)
+		v["can_restrict_members"] = strconv.FormatBool(opts.CanRestrictMembers)
+		v["can_promote_members"] = strconv.FormatBool(opts.CanPromoteMembers)
+		v["can_change_info"] = strconv.FormatBool(opts.CanChangeInfo)
+		v["can_invite_users"] = strconv.FormatBool(opts.CanInviteUsers)
+		v["can_pin_messages"] = strconv.FormatBool(opts.CanPinMessages)
 	}
 
-	r, err := bot.Get("promoteChatMember", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("promoteChatMember", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -1432,30 +2088,37 @@ func (bot *Bot) PromoteChatMember(chatId int64, userId int64, opts *PromoteChatM
 type RestrictChatMemberOpts struct {
 	// Date when restrictions will be lifted for the user, unix time. If user is restricted for more than 366 days or less than 30 seconds from the current time, they are considered to be restricted forever
 	UntilDate int64
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // RestrictChatMember Use this method to restrict a user in a supergroup. The bot must be an administrator in the supergroup for this to work and must have the appropriate administrator rights. Pass True for all permissions to lift restrictions from a user. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
-// - user_id (type int64): Unique identifier of the target user
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
+// - userId (type int64): Unique identifier of the target user
 // - permissions (type ChatPermissions): A JSON-serialized object for new user permissions
 // - opts (type RestrictChatMemberOpts): All optional parameters.
 // https://core.telegram.org/bots/api#restrictchatmember
 func (bot *Bot) RestrictChatMember(chatId int64, userId int64, permissions ChatPermissions, opts *RestrictChatMemberOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["user_id"] = strconv.FormatInt(userId, 10)
 	bs, err := json.Marshal(permissions)
 	if err != nil {
 		return false, fmt.Errorf("failed to marshal field permissions: %w", err)
 	}
-	v.Add("permissions", string(bs))
+	v["permissions"] = string(bs)
 	if opts != nil {
 		if opts.UntilDate != 0 {
-			v.Add("until_date", strconv.FormatInt(opts.UntilDate, 10))
+			v["until_date"] = strconv.FormatInt(opts.UntilDate, 10)
 		}
 	}
 
-	r, err := bot.Get("restrictChatMember", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("restrictChatMember", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -1464,16 +2127,27 @@ func (bot *Bot) RestrictChatMember(chatId int64, userId int64, permissions ChatP
 	return b, json.Unmarshal(r, &b)
 }
 
-// RevokeChatInviteLink Use this method to revoke an invite link created by the bot. If the primary link is revoked, a new link is automatically generated. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns the revoked invite link as ChatInviteLink object.
-// - chat_id (type int64): Unique identifier of the target chat or username of the target channel (in the format @channelusername)
-// - invite_link (type string): The invite link to revoke
-// https://core.telegram.org/bots/api#revokechatinvitelink
-func (bot *Bot) RevokeChatInviteLink(chatId int64, inviteLink string) (*ChatInviteLink, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("invite_link", inviteLink)
+// RevokeChatInviteLinkOpts is the set of optional fields for Bot.RevokeChatInviteLink.
+type RevokeChatInviteLinkOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("revokeChatInviteLink", v)
+// RevokeChatInviteLink Use this method to revoke an invite link created by the bot. If the primary link is revoked, a new link is automatically generated. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns the revoked invite link as ChatInviteLink object.
+// - chatId (type int64): Unique identifier of the target chat or username of the target channel (in the format @channelusername)
+// - inviteLink (type string): The invite link to revoke
+// https://core.telegram.org/bots/api#revokechatinvitelink
+func (bot *Bot) RevokeChatInviteLink(chatId int64, inviteLink string, opts *RevokeChatInviteLinkOpts) (*ChatInviteLink, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["invite_link"] = inviteLink
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("revokeChatInviteLink", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1490,7 +2164,7 @@ type SendAnimationOpts struct {
 	Width int64
 	// Animation height
 	Height int64
-	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 	Thumb InputFile
 	// Animation caption (may also be used when resending animation by file_id), 0-1024 characters after entities parsing
 	Caption string
@@ -1504,36 +2178,38 @@ type SendAnimationOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendAnimation Use this method to send animation files (GIF or H.264/MPEG-4 AVC video without sound). On success, the sent Message is returned. Bots can currently send animation files of up to 50 MB in size, this limit may be changed in the future.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - animation (type InputFile): Animation to send. Pass a file_id as String to send an animation that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get an animation from the Internet, or upload a new animation using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - animation (type InputFile): Animation to send. Pass a file_id as String to send an animation that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get an animation from the Internet, or upload a new animation using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 // - opts (type SendAnimationOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendanimation
 func (bot *Bot) SendAnimation(chatId int64, animation InputFile, opts *SendAnimationOpts) (*Message, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if animation != nil {
 		switch m := animation.(type) {
 		case string:
-			v.Add("animation", m)
+			v["animation"] = m
 
 		case NamedReader:
-			v.Add("animation", "attach://animation")
+			v["animation"] = "attach://animation"
 			data["animation"] = m
 
 		case io.Reader:
-			v.Add("animation", "attach://animation")
+			v["animation"] = "attach://animation"
 			data["animation"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("animation", "attach://animation")
+			v["animation"] = "attach://animation"
 			data["animation"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -1542,60 +2218,65 @@ func (bot *Bot) SendAnimation(chatId int64, animation InputFile, opts *SendAnima
 	}
 	if opts != nil {
 		if opts.Duration != 0 {
-			v.Add("duration", strconv.FormatInt(opts.Duration, 10))
+			v["duration"] = strconv.FormatInt(opts.Duration, 10)
 		}
 		if opts.Width != 0 {
-			v.Add("width", strconv.FormatInt(opts.Width, 10))
+			v["width"] = strconv.FormatInt(opts.Width, 10)
 		}
 		if opts.Height != 0 {
-			v.Add("height", strconv.FormatInt(opts.Height, 10))
+			v["height"] = strconv.FormatInt(opts.Height, 10)
 		}
 		if opts.Thumb != nil {
 			switch m := opts.Thumb.(type) {
 			case string:
-				v.Add("thumb", m)
+				v["thumb"] = m
 
 			case NamedReader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = m
 
 			case io.Reader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
 				return nil, fmt.Errorf("unknown type for InputFile: %T", opts.Thumb)
 			}
 		}
-		v.Add("caption", opts.Caption)
-		v.Add("parse_mode", opts.ParseMode)
+		v["caption"] = opts.Caption
+		v["parse_mode"] = opts.ParseMode
 		if opts.CaptionEntities != nil {
 			bs, err := json.Marshal(opts.CaptionEntities)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field caption_entities: %w", err)
 			}
-			v.Add("caption_entities", string(bs))
+			v["caption_entities"] = string(bs)
 		}
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Post("sendAnimation", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendAnimation", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1618,7 +2299,7 @@ type SendAudioOpts struct {
 	Performer string
 	// Track name
 	Title string
-	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 	Thumb InputFile
 	// Sends the message silently. Users will receive a notification with no sound.
 	DisableNotification bool
@@ -1626,37 +2307,39 @@ type SendAudioOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendAudio Use this method to send audio files, if you want Telegram clients to display them in the music player. Your audio must be in the .MP3 or .M4A format. On success, the sent Message is returned. Bots can currently send audio files of up to 50 MB in size, this limit may be changed in the future.
 // For sending voice messages, use the sendVoice method instead.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - audio (type InputFile): Audio file to send. Pass a file_id as String to send an audio file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get an audio file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - audio (type InputFile): Audio file to send. Pass a file_id as String to send an audio file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get an audio file from the Internet, or upload a new one using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 // - opts (type SendAudioOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendaudio
 func (bot *Bot) SendAudio(chatId int64, audio InputFile, opts *SendAudioOpts) (*Message, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if audio != nil {
 		switch m := audio.(type) {
 		case string:
-			v.Add("audio", m)
+			v["audio"] = m
 
 		case NamedReader:
-			v.Add("audio", "attach://audio")
+			v["audio"] = "attach://audio"
 			data["audio"] = m
 
 		case io.Reader:
-			v.Add("audio", "attach://audio")
+			v["audio"] = "attach://audio"
 			data["audio"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("audio", "attach://audio")
+			v["audio"] = "attach://audio"
 			data["audio"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -1664,57 +2347,62 @@ func (bot *Bot) SendAudio(chatId int64, audio InputFile, opts *SendAudioOpts) (*
 		}
 	}
 	if opts != nil {
-		v.Add("caption", opts.Caption)
-		v.Add("parse_mode", opts.ParseMode)
+		v["caption"] = opts.Caption
+		v["parse_mode"] = opts.ParseMode
 		if opts.CaptionEntities != nil {
 			bs, err := json.Marshal(opts.CaptionEntities)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field caption_entities: %w", err)
 			}
-			v.Add("caption_entities", string(bs))
+			v["caption_entities"] = string(bs)
 		}
 		if opts.Duration != 0 {
-			v.Add("duration", strconv.FormatInt(opts.Duration, 10))
+			v["duration"] = strconv.FormatInt(opts.Duration, 10)
 		}
-		v.Add("performer", opts.Performer)
-		v.Add("title", opts.Title)
+		v["performer"] = opts.Performer
+		v["title"] = opts.Title
 		if opts.Thumb != nil {
 			switch m := opts.Thumb.(type) {
 			case string:
-				v.Add("thumb", m)
+				v["thumb"] = m
 
 			case NamedReader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = m
 
 			case io.Reader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
 				return nil, fmt.Errorf("unknown type for InputFile: %T", opts.Thumb)
 			}
 		}
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Post("sendAudio", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendAudio", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1723,17 +2411,28 @@ func (bot *Bot) SendAudio(chatId int64, audio InputFile, opts *SendAudioOpts) (*
 	return &m, json.Unmarshal(r, &m)
 }
 
+// SendChatActionOpts is the set of optional fields for Bot.SendChatAction.
+type SendChatActionOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // SendChatAction Use this method when you need to tell the user that something is happening on the bot's side. The status is set for 5 seconds or less (when a message arrives from your bot, Telegram clients clear its typing status). Returns True on success.
 // We only recommend using this method when a response from the bot will take a noticeable amount of time to arrive.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - action (type string): Type of action to broadcast. Choose one, depending on what the user is about to receive: typing for text messages, upload_photo for photos, record_video or upload_video for videos, record_voice or upload_voice for voice notes, upload_document for general files, choose_sticker for stickers, find_location for location data, record_video_note or upload_video_note for video notes.
 // https://core.telegram.org/bots/api#sendchataction
-func (bot *Bot) SendChatAction(chatId int64, action string) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("action", action)
+func (bot *Bot) SendChatAction(chatId int64, action string, opts *SendChatActionOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["action"] = action
 
-	r, err := bot.Get("sendChatAction", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendChatAction", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -1754,42 +2453,49 @@ type SendContactOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendContact Use this method to send phone contacts. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - phone_number (type string): Contact's phone number
-// - first_name (type string): Contact's first name
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - phoneNumber (type string): Contact's phone number
+// - firstName (type string): Contact's first name
 // - opts (type SendContactOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendcontact
 func (bot *Bot) SendContact(chatId int64, phoneNumber string, firstName string, opts *SendContactOpts) (*Message, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("phone_number", phoneNumber)
-	v.Add("first_name", firstName)
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["phone_number"] = phoneNumber
+	v["first_name"] = firstName
 	if opts != nil {
-		v.Add("last_name", opts.LastName)
-		v.Add("vcard", opts.Vcard)
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["last_name"] = opts.LastName
+		v["vcard"] = opts.Vcard
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Get("sendContact", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendContact", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1808,37 +2514,44 @@ type SendDiceOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendDice Use this method to send an animated emoji that will display a random value. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - opts (type SendDiceOpts): All optional parameters.
 // https://core.telegram.org/bots/api#senddice
 func (bot *Bot) SendDice(chatId int64, opts *SendDiceOpts) (*Message, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if opts != nil {
-		v.Add("emoji", opts.Emoji)
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["emoji"] = opts.Emoji
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Get("sendDice", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendDice", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1849,7 +2562,7 @@ func (bot *Bot) SendDice(chatId int64, opts *SendDiceOpts) (*Message, error) {
 
 // SendDocumentOpts is the set of optional fields for Bot.SendDocument.
 type SendDocumentOpts struct {
-	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 	Thumb InputFile
 	// Document caption (may also be used when resending documents by file_id), 0-1024 characters after entities parsing
 	Caption string
@@ -1865,36 +2578,38 @@ type SendDocumentOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendDocument Use this method to send general files. On success, the sent Message is returned. Bots can currently send files of any type of up to 50 MB in size, this limit may be changed in the future.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - document (type InputFile): File to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - document (type InputFile): File to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 // - opts (type SendDocumentOpts): All optional parameters.
 // https://core.telegram.org/bots/api#senddocument
 func (bot *Bot) SendDocument(chatId int64, document InputFile, opts *SendDocumentOpts) (*Message, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if document != nil {
 		switch m := document.(type) {
 		case string:
-			v.Add("document", m)
+			v["document"] = m
 
 		case NamedReader:
-			v.Add("document", "attach://document")
+			v["document"] = "attach://document"
 			data["document"] = m
 
 		case io.Reader:
-			v.Add("document", "attach://document")
+			v["document"] = "attach://document"
 			data["document"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("document", "attach://document")
+			v["document"] = "attach://document"
 			data["document"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -1905,50 +2620,55 @@ func (bot *Bot) SendDocument(chatId int64, document InputFile, opts *SendDocumen
 		if opts.Thumb != nil {
 			switch m := opts.Thumb.(type) {
 			case string:
-				v.Add("thumb", m)
+				v["thumb"] = m
 
 			case NamedReader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = m
 
 			case io.Reader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
 				return nil, fmt.Errorf("unknown type for InputFile: %T", opts.Thumb)
 			}
 		}
-		v.Add("caption", opts.Caption)
-		v.Add("parse_mode", opts.ParseMode)
+		v["caption"] = opts.Caption
+		v["parse_mode"] = opts.ParseMode
 		if opts.CaptionEntities != nil {
 			bs, err := json.Marshal(opts.CaptionEntities)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field caption_entities: %w", err)
 			}
-			v.Add("caption_entities", string(bs))
+			v["caption_entities"] = string(bs)
 		}
-		v.Add("disable_content_type_detection", strconv.FormatBool(opts.DisableContentTypeDetection))
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_content_type_detection"] = strconv.FormatBool(opts.DisableContentTypeDetection)
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Post("sendDocument", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendDocument", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -1965,36 +2685,43 @@ type SendGameOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// A JSON-serialized object for an inline keyboard. If empty, one 'Play game_title' button will be shown. If not empty, the first button must launch the game.
 	ReplyMarkup InlineKeyboardMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendGame Use this method to send a game. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat
-// - game_short_name (type string): Short name of the game, serves as the unique identifier for the game. Set up your games via Botfather.
+// - chatId (type int64): Unique identifier for the target chat
+// - gameShortName (type string): Short name of the game, serves as the unique identifier for the game. Set up your games via @BotFather.
 // - opts (type SendGameOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendgame
 func (bot *Bot) SendGame(chatId int64, gameShortName string, opts *SendGameOpts) (*Message, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("game_short_name", gameShortName)
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["game_short_name"] = gameShortName
 	if opts != nil {
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		bs, err := json.Marshal(opts.ReplyMarkup)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 		}
-		v.Add("reply_markup", string(bs))
+		v["reply_markup"] = string(bs)
 	}
 
-	r, err := bot.Get("sendGame", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendGame", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2011,29 +2738,29 @@ type SendInvoiceOpts struct {
 	SuggestedTipAmounts []int64
 	// Unique deep-linking parameter. If left empty, forwarded copies of the sent message will have a Pay button, allowing multiple users to pay directly from the forwarded message, using the same invoice. If non-empty, forwarded copies of the sent message will have a URL button with a deep link to the bot (instead of a Pay button), with the value used as the start parameter
 	StartParameter string
-	// A JSON-serialized data about the invoice, which will be shared with the payment provider. A detailed description of required fields should be provided by the payment provider.
+	// JSON-serialized data about the invoice, which will be shared with the payment provider. A detailed description of required fields should be provided by the payment provider.
 	ProviderData string
 	// URL of the product photo for the invoice. Can be a photo of the goods or a marketing image for a service. People like it better when they see what they are paying for.
 	PhotoUrl string
-	// Photo size
+	// Photo size in bytes
 	PhotoSize int64
 	// Photo width
 	PhotoWidth int64
 	// Photo height
 	PhotoHeight int64
-	// Pass True, if you require the user's full name to complete the order
+	// Pass True if you require the user's full name to complete the order
 	NeedName bool
-	// Pass True, if you require the user's phone number to complete the order
+	// Pass True if you require the user's phone number to complete the order
 	NeedPhoneNumber bool
-	// Pass True, if you require the user's email address to complete the order
+	// Pass True if you require the user's email address to complete the order
 	NeedEmail bool
-	// Pass True, if you require the user's shipping address to complete the order
+	// Pass True if you require the user's shipping address to complete the order
 	NeedShippingAddress bool
-	// Pass True, if user's phone number should be sent to provider
+	// Pass True if the user's phone number should be sent to provider
 	SendPhoneNumberToProvider bool
-	// Pass True, if user's email address should be sent to provider
+	// Pass True if the user's email address should be sent to provider
 	SendEmailToProvider bool
-	// Pass True, if the final price depends on the shipping method
+	// Pass True if the final price depends on the shipping method
 	IsFlexible bool
 	// Sends the message silently. Users will receive a notification with no sound.
 	DisableNotification bool
@@ -2041,81 +2768,88 @@ type SendInvoiceOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// A JSON-serialized object for an inline keyboard. If empty, one 'Pay total price' button will be shown. If not empty, the first button must be a Pay button.
 	ReplyMarkup InlineKeyboardMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendInvoice Use this method to send invoices. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - title (type string): Product name, 1-32 characters
 // - description (type string): Product description, 1-255 characters
 // - payload (type string): Bot-defined invoice payload, 1-128 bytes. This will not be displayed to the user, use for your internal processes.
-// - provider_token (type string): Payments provider token, obtained via Botfather
+// - providerToken (type string): Payment provider token, obtained via @BotFather
 // - currency (type string): Three-letter ISO 4217 currency code, see more on currencies
 // - prices (type []LabeledPrice): Price breakdown, a JSON-serialized list of components (e.g. product price, tax, discount, delivery cost, delivery tax, bonus, etc.)
 // - opts (type SendInvoiceOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendinvoice
 func (bot *Bot) SendInvoice(chatId int64, title string, description string, payload string, providerToken string, currency string, prices []LabeledPrice, opts *SendInvoiceOpts) (*Message, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("title", title)
-	v.Add("description", description)
-	v.Add("payload", payload)
-	v.Add("provider_token", providerToken)
-	v.Add("currency", currency)
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["title"] = title
+	v["description"] = description
+	v["payload"] = payload
+	v["provider_token"] = providerToken
+	v["currency"] = currency
 	if prices != nil {
 		bs, err := json.Marshal(prices)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal field prices: %w", err)
 		}
-		v.Add("prices", string(bs))
+		v["prices"] = string(bs)
 	}
 	if opts != nil {
 		if opts.MaxTipAmount != 0 {
-			v.Add("max_tip_amount", strconv.FormatInt(opts.MaxTipAmount, 10))
+			v["max_tip_amount"] = strconv.FormatInt(opts.MaxTipAmount, 10)
 		}
 		if opts.SuggestedTipAmounts != nil {
 			bs, err := json.Marshal(opts.SuggestedTipAmounts)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field suggested_tip_amounts: %w", err)
 			}
-			v.Add("suggested_tip_amounts", string(bs))
+			v["suggested_tip_amounts"] = string(bs)
 		}
-		v.Add("start_parameter", opts.StartParameter)
-		v.Add("provider_data", opts.ProviderData)
-		v.Add("photo_url", opts.PhotoUrl)
+		v["start_parameter"] = opts.StartParameter
+		v["provider_data"] = opts.ProviderData
+		v["photo_url"] = opts.PhotoUrl
 		if opts.PhotoSize != 0 {
-			v.Add("photo_size", strconv.FormatInt(opts.PhotoSize, 10))
+			v["photo_size"] = strconv.FormatInt(opts.PhotoSize, 10)
 		}
 		if opts.PhotoWidth != 0 {
-			v.Add("photo_width", strconv.FormatInt(opts.PhotoWidth, 10))
+			v["photo_width"] = strconv.FormatInt(opts.PhotoWidth, 10)
 		}
 		if opts.PhotoHeight != 0 {
-			v.Add("photo_height", strconv.FormatInt(opts.PhotoHeight, 10))
+			v["photo_height"] = strconv.FormatInt(opts.PhotoHeight, 10)
 		}
-		v.Add("need_name", strconv.FormatBool(opts.NeedName))
-		v.Add("need_phone_number", strconv.FormatBool(opts.NeedPhoneNumber))
-		v.Add("need_email", strconv.FormatBool(opts.NeedEmail))
-		v.Add("need_shipping_address", strconv.FormatBool(opts.NeedShippingAddress))
-		v.Add("send_phone_number_to_provider", strconv.FormatBool(opts.SendPhoneNumberToProvider))
-		v.Add("send_email_to_provider", strconv.FormatBool(opts.SendEmailToProvider))
-		v.Add("is_flexible", strconv.FormatBool(opts.IsFlexible))
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["need_name"] = strconv.FormatBool(opts.NeedName)
+		v["need_phone_number"] = strconv.FormatBool(opts.NeedPhoneNumber)
+		v["need_email"] = strconv.FormatBool(opts.NeedEmail)
+		v["need_shipping_address"] = strconv.FormatBool(opts.NeedShippingAddress)
+		v["send_phone_number_to_provider"] = strconv.FormatBool(opts.SendPhoneNumberToProvider)
+		v["send_email_to_provider"] = strconv.FormatBool(opts.SendEmailToProvider)
+		v["is_flexible"] = strconv.FormatBool(opts.IsFlexible)
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		bs, err := json.Marshal(opts.ReplyMarkup)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 		}
-		v.Add("reply_markup", string(bs))
+		v["reply_markup"] = string(bs)
 	}
 
-	r, err := bot.Get("sendInvoice", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendInvoice", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2140,52 +2874,59 @@ type SendLocationOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendLocation Use this method to send point on the map. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - latitude (type float64): Latitude of the location
 // - longitude (type float64): Longitude of the location
 // - opts (type SendLocationOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendlocation
 func (bot *Bot) SendLocation(chatId int64, latitude float64, longitude float64, opts *SendLocationOpts) (*Message, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("latitude", strconv.FormatFloat(latitude, 'f', -1, 64))
-	v.Add("longitude", strconv.FormatFloat(longitude, 'f', -1, 64))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["latitude"] = strconv.FormatFloat(latitude, 'f', -1, 64)
+	v["longitude"] = strconv.FormatFloat(longitude, 'f', -1, 64)
 	if opts != nil {
 		if opts.HorizontalAccuracy != 0.0 {
-			v.Add("horizontal_accuracy", strconv.FormatFloat(opts.HorizontalAccuracy, 'f', -1, 64))
+			v["horizontal_accuracy"] = strconv.FormatFloat(opts.HorizontalAccuracy, 'f', -1, 64)
 		}
 		if opts.LivePeriod != 0 {
-			v.Add("live_period", strconv.FormatInt(opts.LivePeriod, 10))
+			v["live_period"] = strconv.FormatInt(opts.LivePeriod, 10)
 		}
 		if opts.Heading != 0 {
-			v.Add("heading", strconv.FormatInt(opts.Heading, 10))
+			v["heading"] = strconv.FormatInt(opts.Heading, 10)
 		}
 		if opts.ProximityAlertRadius != 0 {
-			v.Add("proximity_alert_radius", strconv.FormatInt(opts.ProximityAlertRadius, 10))
+			v["proximity_alert_radius"] = strconv.FormatInt(opts.ProximityAlertRadius, 10)
 		}
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Get("sendLocation", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendLocation", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2202,19 +2943,21 @@ type SendMediaGroupOpts struct {
 	ProtectContent bool
 	// If the messages are a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendMediaGroup Use this method to send a group of photos, videos, documents or audios as an album. Documents and audio files can be only grouped in an album with messages of the same type. On success, an array of Messages that were sent is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - media (type []InputMedia): A JSON-serialized array describing messages to be sent, must include 2-10 items
 // - opts (type SendMediaGroupOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendmediagroup
 func (bot *Bot) SendMediaGroup(chatId int64, media []InputMedia, opts *SendMediaGroupOpts) ([]Message, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if media != nil {
 		var rawList []json.RawMessage
 		for idx, im := range media {
@@ -2228,18 +2971,23 @@ func (bot *Bot) SendMediaGroup(chatId int64, media []InputMedia, opts *SendMedia
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal raw json list of InputMedia for field: media %w", err)
 		}
-		v.Add("media", string(bs))
+		v["media"] = string(bs)
 	}
 	if opts != nil {
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 	}
 
-	r, err := bot.Post("sendMediaGroup", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendMediaGroup", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2258,51 +3006,58 @@ type SendMessageOpts struct {
 	DisableWebPagePreview bool
 	// Sends the message silently. Users will receive a notification with no sound.
 	DisableNotification bool
-	// Protects the contents of sent messages from forwarding and saving
+	// Protects the contents of the sent message from forwarding and saving
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendMessage Use this method to send text messages. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - text (type string): Text of the message to be sent, 1-4096 characters after entities parsing
 // - opts (type SendMessageOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendmessage
 func (bot *Bot) SendMessage(chatId int64, text string, opts *SendMessageOpts) (*Message, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("text", text)
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["text"] = text
 	if opts != nil {
-		v.Add("parse_mode", opts.ParseMode)
+		v["parse_mode"] = opts.ParseMode
 		if opts.Entities != nil {
 			bs, err := json.Marshal(opts.Entities)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field entities: %w", err)
 			}
-			v.Add("entities", string(bs))
+			v["entities"] = string(bs)
 		}
-		v.Add("disable_web_page_preview", strconv.FormatBool(opts.DisableWebPagePreview))
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_web_page_preview"] = strconv.FormatBool(opts.DisableWebPagePreview)
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Get("sendMessage", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendMessage", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2325,36 +3080,38 @@ type SendPhotoOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendPhoto Use this method to send photos. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - photo (type InputFile): Photo to send. Pass a file_id as String to send a photo that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a photo from the Internet, or upload a new photo using multipart/form-data. The photo must be at most 10 MB in size. The photo's width and height must not exceed 10000 in total. Width and height ratio must be at most 20. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - photo (type InputFile): Photo to send. Pass a file_id as String to send a photo that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a photo from the Internet, or upload a new photo using multipart/form-data. The photo must be at most 10 MB in size. The photo's width and height must not exceed 10000 in total. Width and height ratio must be at most 20. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 // - opts (type SendPhotoOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendphoto
 func (bot *Bot) SendPhoto(chatId int64, photo InputFile, opts *SendPhotoOpts) (*Message, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if photo != nil {
 		switch m := photo.(type) {
 		case string:
-			v.Add("photo", m)
+			v["photo"] = m
 
 		case NamedReader:
-			v.Add("photo", "attach://photo")
+			v["photo"] = "attach://photo"
 			data["photo"] = m
 
 		case io.Reader:
-			v.Add("photo", "attach://photo")
+			v["photo"] = "attach://photo"
 			data["photo"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("photo", "attach://photo")
+			v["photo"] = "attach://photo"
 			data["photo"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -2362,31 +3119,36 @@ func (bot *Bot) SendPhoto(chatId int64, photo InputFile, opts *SendPhotoOpts) (*
 		}
 	}
 	if opts != nil {
-		v.Add("caption", opts.Caption)
-		v.Add("parse_mode", opts.ParseMode)
+		v["caption"] = opts.Caption
+		v["parse_mode"] = opts.ParseMode
 		if opts.CaptionEntities != nil {
 			bs, err := json.Marshal(opts.CaptionEntities)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field caption_entities: %w", err)
 			}
-			v.Add("caption_entities", string(bs))
+			v["caption_entities"] = string(bs)
 		}
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Post("sendPhoto", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendPhoto", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2415,7 +3177,7 @@ type SendPollOpts struct {
 	OpenPeriod int64
 	// Point in time (Unix timestamp) when the poll will be automatically closed. Must be at least 5 and no more than 600 seconds in the future. Can't be used together with open_period.
 	CloseDate int64
-	// Pass True, if the poll needs to be immediately closed. This can be useful for poll preview.
+	// Pass True if the poll needs to be immediately closed. This can be useful for poll preview.
 	IsClosed bool
 	// Sends the message silently. Users will receive a notification with no sound.
 	DisableNotification bool
@@ -2423,68 +3185,76 @@ type SendPollOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendPoll Use this method to send a native poll. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - question (type string): Poll question, 1-300 characters
 // - options (type []string): A JSON-serialized list of answer options, 2-10 strings 1-100 characters each
 // - opts (type SendPollOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendpoll
 func (bot *Bot) SendPoll(chatId int64, question string, options []string, opts *SendPollOpts) (*Message, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("question", question)
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["question"] = question
 	if options != nil {
 		bs, err := json.Marshal(options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal field options: %w", err)
 		}
-		v.Add("options", string(bs))
+		v["options"] = string(bs)
 	}
 	if opts != nil {
-		v.Add("is_anonymous", strconv.FormatBool(opts.IsAnonymous))
-		v.Add("type", opts.Type)
-		v.Add("allows_multiple_answers", strconv.FormatBool(opts.AllowsMultipleAnswers))
-		if opts.CorrectOptionId != 0 {
-			v.Add("correct_option_id", strconv.FormatInt(opts.CorrectOptionId, 10))
+		v["is_anonymous"] = strconv.FormatBool(opts.IsAnonymous)
+		v["type"] = opts.Type
+		v["allows_multiple_answers"] = strconv.FormatBool(opts.AllowsMultipleAnswers)
+		if opts.Type == "quiz" {
+			// correct_option_id should always be set when the type is "quiz" - it doesnt need to be set for type "regular".
+			v["correct_option_id"] = strconv.FormatInt(opts.CorrectOptionId, 10)
 		}
-		v.Add("explanation", opts.Explanation)
-		v.Add("explanation_parse_mode", opts.ExplanationParseMode)
+		v["explanation"] = opts.Explanation
+		v["explanation_parse_mode"] = opts.ExplanationParseMode
 		if opts.ExplanationEntities != nil {
 			bs, err := json.Marshal(opts.ExplanationEntities)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field explanation_entities: %w", err)
 			}
-			v.Add("explanation_entities", string(bs))
+			v["explanation_entities"] = string(bs)
 		}
 		if opts.OpenPeriod != 0 {
-			v.Add("open_period", strconv.FormatInt(opts.OpenPeriod, 10))
+			v["open_period"] = strconv.FormatInt(opts.OpenPeriod, 10)
 		}
 		if opts.CloseDate != 0 {
-			v.Add("close_date", strconv.FormatInt(opts.CloseDate, 10))
+			v["close_date"] = strconv.FormatInt(opts.CloseDate, 10)
 		}
-		v.Add("is_closed", strconv.FormatBool(opts.IsClosed))
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["is_closed"] = strconv.FormatBool(opts.IsClosed)
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Get("sendPoll", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendPoll", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2501,36 +3271,38 @@ type SendStickerOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// SendSticker Use this method to send static .WEBP or animated .TGS stickers. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - sticker (type InputFile): Sticker to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a .WEBP file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+// SendSticker Use this method to send static .WEBP, animated .TGS, or video .WEBM stickers. On success, the sent Message is returned.
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - sticker (type InputFile): Sticker to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a .WEBP file from the Internet, or upload a new one using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 // - opts (type SendStickerOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendsticker
 func (bot *Bot) SendSticker(chatId int64, sticker InputFile, opts *SendStickerOpts) (*Message, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if sticker != nil {
 		switch m := sticker.(type) {
 		case string:
-			v.Add("sticker", m)
+			v["sticker"] = m
 
 		case NamedReader:
-			v.Add("sticker", "attach://sticker")
+			v["sticker"] = "attach://sticker"
 			data["sticker"] = m
 
 		case io.Reader:
-			v.Add("sticker", "attach://sticker")
+			v["sticker"] = "attach://sticker"
 			data["sticker"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("sticker", "attach://sticker")
+			v["sticker"] = "attach://sticker"
 			data["sticker"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -2538,22 +3310,27 @@ func (bot *Bot) SendSticker(chatId int64, sticker InputFile, opts *SendStickerOp
 		}
 	}
 	if opts != nil {
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Post("sendSticker", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendSticker", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2578,14 +3355,16 @@ type SendVenueOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendVenue Use this method to send information about a venue. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - latitude (type float64): Latitude of the venue
 // - longitude (type float64): Longitude of the venue
 // - title (type string): Name of the venue
@@ -2593,33 +3372,38 @@ type SendVenueOpts struct {
 // - opts (type SendVenueOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendvenue
 func (bot *Bot) SendVenue(chatId int64, latitude float64, longitude float64, title string, address string, opts *SendVenueOpts) (*Message, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("latitude", strconv.FormatFloat(latitude, 'f', -1, 64))
-	v.Add("longitude", strconv.FormatFloat(longitude, 'f', -1, 64))
-	v.Add("title", title)
-	v.Add("address", address)
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["latitude"] = strconv.FormatFloat(latitude, 'f', -1, 64)
+	v["longitude"] = strconv.FormatFloat(longitude, 'f', -1, 64)
+	v["title"] = title
+	v["address"] = address
 	if opts != nil {
-		v.Add("foursquare_id", opts.FoursquareId)
-		v.Add("foursquare_type", opts.FoursquareType)
-		v.Add("google_place_id", opts.GooglePlaceId)
-		v.Add("google_place_type", opts.GooglePlaceType)
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["foursquare_id"] = opts.FoursquareId
+		v["foursquare_type"] = opts.FoursquareType
+		v["google_place_id"] = opts.GooglePlaceId
+		v["google_place_type"] = opts.GooglePlaceType
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Get("sendVenue", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendVenue", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2636,7 +3420,7 @@ type SendVideoOpts struct {
 	Width int64
 	// Video height
 	Height int64
-	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 	Thumb InputFile
 	// Video caption (may also be used when resending videos by file_id), 0-1024 characters after entities parsing
 	Caption string
@@ -2644,7 +3428,7 @@ type SendVideoOpts struct {
 	ParseMode string
 	// A JSON-serialized list of special entities that appear in the caption, which can be specified instead of parse_mode
 	CaptionEntities []MessageEntity
-	// Pass True, if the uploaded video is suitable for streaming
+	// Pass True if the uploaded video is suitable for streaming
 	SupportsStreaming bool
 	// Sends the message silently. Users will receive a notification with no sound.
 	DisableNotification bool
@@ -2652,36 +3436,38 @@ type SendVideoOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// SendVideo Use this method to send video files, Telegram clients support mp4 videos (other formats may be sent as Document). On success, the sent Message is returned. Bots can currently send video files of up to 50 MB in size, this limit may be changed in the future.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - video (type InputFile): Video to send. Pass a file_id as String to send a video that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a video from the Internet, or upload a new video using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+// SendVideo Use this method to send video files, Telegram clients support MPEG4 videos (other formats may be sent as Document). On success, the sent Message is returned. Bots can currently send video files of up to 50 MB in size, this limit may be changed in the future.
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - video (type InputFile): Video to send. Pass a file_id as String to send a video that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a video from the Internet, or upload a new video using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 // - opts (type SendVideoOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendvideo
 func (bot *Bot) SendVideo(chatId int64, video InputFile, opts *SendVideoOpts) (*Message, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if video != nil {
 		switch m := video.(type) {
 		case string:
-			v.Add("video", m)
+			v["video"] = m
 
 		case NamedReader:
-			v.Add("video", "attach://video")
+			v["video"] = "attach://video"
 			data["video"] = m
 
 		case io.Reader:
-			v.Add("video", "attach://video")
+			v["video"] = "attach://video"
 			data["video"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("video", "attach://video")
+			v["video"] = "attach://video"
 			data["video"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -2690,61 +3476,66 @@ func (bot *Bot) SendVideo(chatId int64, video InputFile, opts *SendVideoOpts) (*
 	}
 	if opts != nil {
 		if opts.Duration != 0 {
-			v.Add("duration", strconv.FormatInt(opts.Duration, 10))
+			v["duration"] = strconv.FormatInt(opts.Duration, 10)
 		}
 		if opts.Width != 0 {
-			v.Add("width", strconv.FormatInt(opts.Width, 10))
+			v["width"] = strconv.FormatInt(opts.Width, 10)
 		}
 		if opts.Height != 0 {
-			v.Add("height", strconv.FormatInt(opts.Height, 10))
+			v["height"] = strconv.FormatInt(opts.Height, 10)
 		}
 		if opts.Thumb != nil {
 			switch m := opts.Thumb.(type) {
 			case string:
-				v.Add("thumb", m)
+				v["thumb"] = m
 
 			case NamedReader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = m
 
 			case io.Reader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
 				return nil, fmt.Errorf("unknown type for InputFile: %T", opts.Thumb)
 			}
 		}
-		v.Add("caption", opts.Caption)
-		v.Add("parse_mode", opts.ParseMode)
+		v["caption"] = opts.Caption
+		v["parse_mode"] = opts.ParseMode
 		if opts.CaptionEntities != nil {
 			bs, err := json.Marshal(opts.CaptionEntities)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field caption_entities: %w", err)
 			}
-			v.Add("caption_entities", string(bs))
+			v["caption_entities"] = string(bs)
 		}
-		v.Add("supports_streaming", strconv.FormatBool(opts.SupportsStreaming))
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["supports_streaming"] = strconv.FormatBool(opts.SupportsStreaming)
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Post("sendVideo", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendVideo", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2759,7 +3550,7 @@ type SendVideoNoteOpts struct {
 	Duration int64
 	// Video width and height, i.e. diameter of the video message
 	Length int64
-	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+	// Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 	Thumb InputFile
 	// Sends the message silently. Users will receive a notification with no sound.
 	DisableNotification bool
@@ -2767,36 +3558,38 @@ type SendVideoNoteOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// SendVideoNote As of v.4.0, Telegram clients support rounded square mp4 videos of up to 1 minute long. Use this method to send video messages. On success, the sent Message is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - video_note (type InputFile): Video note to send. Pass a file_id as String to send a video note that exists on the Telegram servers (recommended) or upload a new video using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files. Sending video notes by a URL is currently unsupported
+// SendVideoNote As of v.4.0, Telegram clients support rounded square MPEG4 videos of up to 1 minute long. Use this method to send video messages. On success, the sent Message is returned.
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - videoNote (type InputFile): Video note to send. Pass a file_id as String to send a video note that exists on the Telegram servers (recommended) or upload a new video using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files. Sending video notes by a URL is currently unsupported
 // - opts (type SendVideoNoteOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendvideonote
 func (bot *Bot) SendVideoNote(chatId int64, videoNote InputFile, opts *SendVideoNoteOpts) (*Message, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if videoNote != nil {
 		switch m := videoNote.(type) {
 		case string:
-			v.Add("video_note", m)
+			v["video_note"] = m
 
 		case NamedReader:
-			v.Add("video_note", "attach://video_note")
+			v["video_note"] = "attach://video_note"
 			data["video_note"] = m
 
 		case io.Reader:
-			v.Add("video_note", "attach://video_note")
+			v["video_note"] = "attach://video_note"
 			data["video_note"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("video_note", "attach://video_note")
+			v["video_note"] = "attach://video_note"
 			data["video_note"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -2805,48 +3598,53 @@ func (bot *Bot) SendVideoNote(chatId int64, videoNote InputFile, opts *SendVideo
 	}
 	if opts != nil {
 		if opts.Duration != 0 {
-			v.Add("duration", strconv.FormatInt(opts.Duration, 10))
+			v["duration"] = strconv.FormatInt(opts.Duration, 10)
 		}
 		if opts.Length != 0 {
-			v.Add("length", strconv.FormatInt(opts.Length, 10))
+			v["length"] = strconv.FormatInt(opts.Length, 10)
 		}
 		if opts.Thumb != nil {
 			switch m := opts.Thumb.(type) {
 			case string:
-				v.Add("thumb", m)
+				v["thumb"] = m
 
 			case NamedReader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = m
 
 			case io.Reader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
 				return nil, fmt.Errorf("unknown type for InputFile: %T", opts.Thumb)
 			}
 		}
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Post("sendVideoNote", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendVideoNote", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2871,36 +3669,38 @@ type SendVoiceOpts struct {
 	ProtectContent bool
 	// If the message is a reply, ID of the original message
 	ReplyToMessageId int64
-	// Pass True, if the message should be sent even if the specified replied-to message is not found
+	// Pass True if the message should be sent even if the specified replied-to message is not found
 	AllowSendingWithoutReply bool
 	// Additional interface options. A JSON-serialized object for an inline keyboard, custom reply keyboard, instructions to remove reply keyboard or to force a reply from the user.
 	ReplyMarkup ReplyMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SendVoice Use this method to send audio files, if you want Telegram clients to display the file as a playable voice message. For this to work, your audio must be in an .OGG file encoded with OPUS (other formats may be sent as Audio or Document). On success, the sent Message is returned. Bots can currently send voice messages of up to 50 MB in size, this limit may be changed in the future.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - voice (type InputFile): Audio file to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - voice (type InputFile): Audio file to send. Pass a file_id as String to send a file that exists on the Telegram servers (recommended), pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 // - opts (type SendVoiceOpts): All optional parameters.
 // https://core.telegram.org/bots/api#sendvoice
 func (bot *Bot) SendVoice(chatId int64, voice InputFile, opts *SendVoiceOpts) (*Message, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if voice != nil {
 		switch m := voice.(type) {
 		case string:
-			v.Add("voice", m)
+			v["voice"] = m
 
 		case NamedReader:
-			v.Add("voice", "attach://voice")
+			v["voice"] = "attach://voice"
 			data["voice"] = m
 
 		case io.Reader:
-			v.Add("voice", "attach://voice")
+			v["voice"] = "attach://voice"
 			data["voice"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("voice", "attach://voice")
+			v["voice"] = "attach://voice"
 			data["voice"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -2908,34 +3708,39 @@ func (bot *Bot) SendVoice(chatId int64, voice InputFile, opts *SendVoiceOpts) (*
 		}
 	}
 	if opts != nil {
-		v.Add("caption", opts.Caption)
-		v.Add("parse_mode", opts.ParseMode)
+		v["caption"] = opts.Caption
+		v["parse_mode"] = opts.ParseMode
 		if opts.CaptionEntities != nil {
 			bs, err := json.Marshal(opts.CaptionEntities)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field caption_entities: %w", err)
 			}
-			v.Add("caption_entities", string(bs))
+			v["caption_entities"] = string(bs)
 		}
 		if opts.Duration != 0 {
-			v.Add("duration", strconv.FormatInt(opts.Duration, 10))
+			v["duration"] = strconv.FormatInt(opts.Duration, 10)
 		}
-		v.Add("disable_notification", strconv.FormatBool(opts.DisableNotification))
-		v.Add("protect_content", strconv.FormatBool(opts.ProtectContent))
+		v["disable_notification"] = strconv.FormatBool(opts.DisableNotification)
+		v["protect_content"] = strconv.FormatBool(opts.ProtectContent)
 		if opts.ReplyToMessageId != 0 {
-			v.Add("reply_to_message_id", strconv.FormatInt(opts.ReplyToMessageId, 10))
+			v["reply_to_message_id"] = strconv.FormatInt(opts.ReplyToMessageId, 10)
 		}
-		v.Add("allow_sending_without_reply", strconv.FormatBool(opts.AllowSendingWithoutReply))
+		v["allow_sending_without_reply"] = strconv.FormatBool(opts.AllowSendingWithoutReply)
 		if opts.ReplyMarkup != nil {
 			bs, err := json.Marshal(opts.ReplyMarkup)
 			if err != nil {
 				return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 			}
-			v.Add("reply_markup", string(bs))
+			v["reply_markup"] = string(bs)
 		}
 	}
 
-	r, err := bot.Post("sendVoice", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("sendVoice", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -2944,18 +3749,29 @@ func (bot *Bot) SendVoice(chatId int64, voice InputFile, opts *SendVoiceOpts) (*
 	return &m, json.Unmarshal(r, &m)
 }
 
-// SetChatAdministratorCustomTitle Use this method to set a custom title for an administrator in a supergroup promoted by the bot. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
-// - user_id (type int64): Unique identifier of the target user
-// - custom_title (type string): New custom title for the administrator; 0-16 characters, emoji are not allowed
-// https://core.telegram.org/bots/api#setchatadministratorcustomtitle
-func (bot *Bot) SetChatAdministratorCustomTitle(chatId int64, userId int64, customTitle string) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("user_id", strconv.FormatInt(userId, 10))
-	v.Add("custom_title", customTitle)
+// SetChatAdministratorCustomTitleOpts is the set of optional fields for Bot.SetChatAdministratorCustomTitle.
+type SetChatAdministratorCustomTitleOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("setChatAdministratorCustomTitle", v)
+// SetChatAdministratorCustomTitle Use this method to set a custom title for an administrator in a supergroup promoted by the bot. Returns True on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
+// - userId (type int64): Unique identifier of the target user
+// - customTitle (type string): New custom title for the administrator; 0-16 characters, emoji are not allowed
+// https://core.telegram.org/bots/api#setchatadministratorcustomtitle
+func (bot *Bot) SetChatAdministratorCustomTitle(chatId int64, userId int64, customTitle string, opts *SetChatAdministratorCustomTitleOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["user_id"] = strconv.FormatInt(userId, 10)
+	v["custom_title"] = customTitle
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setChatAdministratorCustomTitle", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -2968,20 +3784,27 @@ func (bot *Bot) SetChatAdministratorCustomTitle(chatId int64, userId int64, cust
 type SetChatDescriptionOpts struct {
 	// New chat description, 0-255 characters
 	Description string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SetChatDescription Use this method to change the description of a group, a supergroup or a channel. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - opts (type SetChatDescriptionOpts): All optional parameters.
 // https://core.telegram.org/bots/api#setchatdescription
 func (bot *Bot) SetChatDescription(chatId int64, opts *SetChatDescriptionOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if opts != nil {
-		v.Add("description", opts.Description)
+		v["description"] = opts.Description
 	}
 
-	r, err := bot.Get("setChatDescription", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setChatDescription", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -2990,20 +3813,71 @@ func (bot *Bot) SetChatDescription(chatId int64, opts *SetChatDescriptionOpts) (
 	return b, json.Unmarshal(r, &b)
 }
 
+// SetChatMenuButtonOpts is the set of optional fields for Bot.SetChatMenuButton.
+type SetChatMenuButtonOpts struct {
+	// Unique identifier for the target private chat. If not specified, default bot's menu button will be changed
+	ChatId int64
+	// A JSON-serialized object for the bot's new menu button. Defaults to MenuButtonDefault
+	MenuButton MenuButton
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
+// SetChatMenuButton Use this method to change the bot's menu button in a private chat, or the default menu button. Returns True on success.
+// - opts (type SetChatMenuButtonOpts): All optional parameters.
+// https://core.telegram.org/bots/api#setchatmenubutton
+func (bot *Bot) SetChatMenuButton(opts *SetChatMenuButtonOpts) (bool, error) {
+	v := map[string]string{}
+	if opts != nil {
+		if opts.ChatId != 0 {
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
+		}
+		bs, err := json.Marshal(opts.MenuButton)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal field menu_button: %w", err)
+		}
+		v["menu_button"] = string(bs)
+	}
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setChatMenuButton", v, nil, reqOpts)
+	if err != nil {
+		return false, err
+	}
+
+	var b bool
+	return b, json.Unmarshal(r, &b)
+}
+
+// SetChatPermissionsOpts is the set of optional fields for Bot.SetChatPermissions.
+type SetChatPermissionsOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // SetChatPermissions Use this method to set default chat permissions for all members. The bot must be an administrator in the group or a supergroup for this to work and must have the can_restrict_members administrator rights. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
 // - permissions (type ChatPermissions): A JSON-serialized object for new default chat permissions
 // https://core.telegram.org/bots/api#setchatpermissions
-func (bot *Bot) SetChatPermissions(chatId int64, permissions ChatPermissions) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+func (bot *Bot) SetChatPermissions(chatId int64, permissions ChatPermissions, opts *SetChatPermissionsOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	bs, err := json.Marshal(permissions)
 	if err != nil {
 		return false, fmt.Errorf("failed to marshal field permissions: %w", err)
 	}
-	v.Add("permissions", string(bs))
+	v["permissions"] = string(bs)
 
-	r, err := bot.Get("setChatPermissions", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setChatPermissions", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3012,26 +3886,32 @@ func (bot *Bot) SetChatPermissions(chatId int64, permissions ChatPermissions) (b
 	return b, json.Unmarshal(r, &b)
 }
 
+// SetChatPhotoOpts is the set of optional fields for Bot.SetChatPhoto.
+type SetChatPhotoOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // SetChatPhoto Use this method to set a new profile photo for the chat. Photos can't be changed for private chats. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - photo (type InputFile): New chat photo, uploaded using multipart/form-data
 // https://core.telegram.org/bots/api#setchatphoto
-func (bot *Bot) SetChatPhoto(chatId int64, photo InputFile) (bool, error) {
-	v := urlLib.Values{}
+func (bot *Bot) SetChatPhoto(chatId int64, photo InputFile, opts *SetChatPhotoOpts) (bool, error) {
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if photo != nil {
 		switch m := photo.(type) {
 		case NamedReader:
-			v.Add("photo", "attach://photo")
+			v["photo"] = "attach://photo"
 			data["photo"] = m
 
 		case io.Reader:
-			v.Add("photo", "attach://photo")
+			v["photo"] = "attach://photo"
 			data["photo"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("photo", "attach://photo")
+			v["photo"] = "attach://photo"
 			data["photo"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -3039,25 +3919,41 @@ func (bot *Bot) SetChatPhoto(chatId int64, photo InputFile) (bool, error) {
 		}
 	}
 
-	r, err := bot.Post("setChatPhoto", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setChatPhoto", v, data, reqOpts)
 	if err != nil {
 		return false, err
 	}
 
 	var b bool
 	return b, json.Unmarshal(r, &b)
+}
+
+// SetChatStickerSetOpts is the set of optional fields for Bot.SetChatStickerSet.
+type SetChatStickerSetOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SetChatStickerSet Use this method to set a new group sticker set for a supergroup. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Use the field can_set_sticker_set optionally returned in getChat requests to check if the bot can use this method. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
-// - sticker_set_name (type string): Name of the sticker set to be set as the group sticker set
+// - chatId (type int64): Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
+// - stickerSetName (type string): Name of the sticker set to be set as the group sticker set
 // https://core.telegram.org/bots/api#setchatstickerset
-func (bot *Bot) SetChatStickerSet(chatId int64, stickerSetName string) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("sticker_set_name", stickerSetName)
+func (bot *Bot) SetChatStickerSet(chatId int64, stickerSetName string, opts *SetChatStickerSetOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["sticker_set_name"] = stickerSetName
 
-	r, err := bot.Get("setChatStickerSet", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setChatStickerSet", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3066,16 +3962,27 @@ func (bot *Bot) SetChatStickerSet(chatId int64, stickerSetName string) (bool, er
 	return b, json.Unmarshal(r, &b)
 }
 
+// SetChatTitleOpts is the set of optional fields for Bot.SetChatTitle.
+type SetChatTitleOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // SetChatTitle Use this method to change the title of a chat. Titles can't be changed for private chats. The bot must be an administrator in the chat for this to work and must have the appropriate administrator rights. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - title (type string): New chat title, 1-255 characters
 // https://core.telegram.org/bots/api#setchattitle
-func (bot *Bot) SetChatTitle(chatId int64, title string) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("title", title)
+func (bot *Bot) SetChatTitle(chatId int64, title string, opts *SetChatTitleOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["title"] = title
 
-	r, err := bot.Get("setChatTitle", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setChatTitle", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3086,9 +3993,9 @@ func (bot *Bot) SetChatTitle(chatId int64, title string) (bool, error) {
 
 // SetGameScoreOpts is the set of optional fields for Bot.SetGameScore.
 type SetGameScoreOpts struct {
-	// Pass True, if the high score is allowed to decrease. This can be useful when fixing mistakes or banning cheaters
+	// Pass True if the high score is allowed to decrease. This can be useful when fixing mistakes or banning cheaters
 	Force bool
-	// Pass True, if the game message should not be automatically edited to include the current scoreboard
+	// Pass True if the game message should not be automatically edited to include the current scoreboard
 	DisableEditMessage bool
 	// Required if inline_message_id is not specified. Unique identifier for the target chat
 	ChatId int64
@@ -3096,30 +4003,37 @@ type SetGameScoreOpts struct {
 	MessageId int64
 	// Required if chat_id and message_id are not specified. Identifier of the inline message
 	InlineMessageId string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SetGameScore Use this method to set the score of the specified user in a game message. On success, if the message is not an inline message, the Message is returned, otherwise True is returned. Returns an error, if the new score is not greater than the user's current score in the chat and force is False.
-// - user_id (type int64): User identifier
+// - userId (type int64): User identifier
 // - score (type int64): New score, must be non-negative
 // - opts (type SetGameScoreOpts): All optional parameters.
 // https://core.telegram.org/bots/api#setgamescore
 func (bot *Bot) SetGameScore(userId int64, score int64, opts *SetGameScoreOpts) (*Message, bool, error) {
-	v := urlLib.Values{}
-	v.Add("user_id", strconv.FormatInt(userId, 10))
-	v.Add("score", strconv.FormatInt(score, 10))
+	v := map[string]string{}
+	v["user_id"] = strconv.FormatInt(userId, 10)
+	v["score"] = strconv.FormatInt(score, 10)
 	if opts != nil {
-		v.Add("force", strconv.FormatBool(opts.Force))
-		v.Add("disable_edit_message", strconv.FormatBool(opts.DisableEditMessage))
+		v["force"] = strconv.FormatBool(opts.Force)
+		v["disable_edit_message"] = strconv.FormatBool(opts.DisableEditMessage)
 		if opts.ChatId != 0 {
-			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
 		}
 		if opts.MessageId != 0 {
-			v.Add("message_id", strconv.FormatInt(opts.MessageId, 10))
+			v["message_id"] = strconv.FormatInt(opts.MessageId, 10)
 		}
-		v.Add("inline_message_id", opts.InlineMessageId)
+		v["inline_message_id"] = opts.InlineMessageId
 	}
 
-	r, err := bot.Get("setGameScore", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setGameScore", v, nil, reqOpts)
 	if err != nil {
 		return nil, false, err
 	}
@@ -3142,6 +4056,8 @@ type SetMyCommandsOpts struct {
 	Scope BotCommandScope
 	// A two-letter ISO 639-1 language code. If empty, commands will be applied to all users from the given scope, for whose language there are no dedicated commands
 	LanguageCode string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SetMyCommands Use this method to change the list of the bot's commands. See https://core.telegram.org/bots#commands for more details about bot commands. Returns True on success.
@@ -3149,24 +4065,29 @@ type SetMyCommandsOpts struct {
 // - opts (type SetMyCommandsOpts): All optional parameters.
 // https://core.telegram.org/bots/api#setmycommands
 func (bot *Bot) SetMyCommands(commands []BotCommand, opts *SetMyCommandsOpts) (bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	if commands != nil {
 		bs, err := json.Marshal(commands)
 		if err != nil {
 			return false, fmt.Errorf("failed to marshal field commands: %w", err)
 		}
-		v.Add("commands", string(bs))
+		v["commands"] = string(bs)
 	}
 	if opts != nil {
 		bs, err := json.Marshal(opts.Scope)
 		if err != nil {
 			return false, fmt.Errorf("failed to marshal field scope: %w", err)
 		}
-		v.Add("scope", string(bs))
-		v.Add("language_code", opts.LanguageCode)
+		v["scope"] = string(bs)
+		v["language_code"] = opts.LanguageCode
 	}
 
-	r, err := bot.Get("setMyCommands", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setMyCommands", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3175,41 +4096,101 @@ func (bot *Bot) SetMyCommands(commands []BotCommand, opts *SetMyCommandsOpts) (b
 	return b, json.Unmarshal(r, &b)
 }
 
-// SetPassportDataErrors Informs a user that some of the Telegram Passport elements they provided contains errors. The user will not be able to re-submit their Passport to you until the errors are fixed (the contents of the field for which you returned the error must change). Returns True on success.
-// Use this if the data submitted by the user doesn't satisfy the standards your service requires for any reason. For example, if a birthday date seems invalid, a submitted document is blurry, a scan shows evidence of tampering, etc. Supply some details in the error message to make sure the user knows how to correct the issues.
-// - user_id (type int64): User identifier
-// - errors (type []PassportElementError): A JSON-serialized array describing the errors
-// https://core.telegram.org/bots/api#setpassportdataerrors
-func (bot *Bot) SetPassportDataErrors(userId int64, errors []PassportElementError) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("user_id", strconv.FormatInt(userId, 10))
-	if errors != nil {
-		bs, err := json.Marshal(errors)
+// SetMyDefaultAdministratorRightsOpts is the set of optional fields for Bot.SetMyDefaultAdministratorRights.
+type SetMyDefaultAdministratorRightsOpts struct {
+	// A JSON-serialized object describing new default administrator rights. If not specified, the default administrator rights will be cleared.
+	Rights ChatAdministratorRights
+	// Pass True to change the default administrator rights of the bot in channels. Otherwise, the default administrator rights of the bot for groups and supergroups will be changed.
+	ForChannels bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
+// SetMyDefaultAdministratorRights Use this method to change the default administrator rights requested by the bot when it's added as an administrator to groups or channels. These rights will be suggested to users, but they are are free to modify the list before adding the bot. Returns True on success.
+// - opts (type SetMyDefaultAdministratorRightsOpts): All optional parameters.
+// https://core.telegram.org/bots/api#setmydefaultadministratorrights
+func (bot *Bot) SetMyDefaultAdministratorRights(opts *SetMyDefaultAdministratorRightsOpts) (bool, error) {
+	v := map[string]string{}
+	if opts != nil {
+		bs, err := json.Marshal(opts.Rights)
 		if err != nil {
-			return false, fmt.Errorf("failed to marshal field errors: %w", err)
+			return false, fmt.Errorf("failed to marshal field rights: %w", err)
 		}
-		v.Add("errors", string(bs))
+		v["rights"] = string(bs)
+		v["for_channels"] = strconv.FormatBool(opts.ForChannels)
 	}
 
-	r, err := bot.Get("setPassportDataErrors", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setMyDefaultAdministratorRights", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
 
 	var b bool
 	return b, json.Unmarshal(r, &b)
+}
+
+// SetPassportDataErrorsOpts is the set of optional fields for Bot.SetPassportDataErrors.
+type SetPassportDataErrorsOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
+// SetPassportDataErrors Informs a user that some of the Telegram Passport elements they provided contains errors. The user will not be able to re-submit their Passport to you until the errors are fixed (the contents of the field for which you returned the error must change). Returns True on success.
+// Use this if the data submitted by the user doesn't satisfy the standards your service requires for any reason. For example, if a birthday date seems invalid, a submitted document is blurry, a scan shows evidence of tampering, etc. Supply some details in the error message to make sure the user knows how to correct the issues.
+// - userId (type int64): User identifier
+// - errors (type []PassportElementError): A JSON-serialized array describing the errors
+// https://core.telegram.org/bots/api#setpassportdataerrors
+func (bot *Bot) SetPassportDataErrors(userId int64, errors []PassportElementError, opts *SetPassportDataErrorsOpts) (bool, error) {
+	v := map[string]string{}
+	v["user_id"] = strconv.FormatInt(userId, 10)
+	if errors != nil {
+		bs, err := json.Marshal(errors)
+		if err != nil {
+			return false, fmt.Errorf("failed to marshal field errors: %w", err)
+		}
+		v["errors"] = string(bs)
+	}
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setPassportDataErrors", v, nil, reqOpts)
+	if err != nil {
+		return false, err
+	}
+
+	var b bool
+	return b, json.Unmarshal(r, &b)
+}
+
+// SetStickerPositionInSetOpts is the set of optional fields for Bot.SetStickerPositionInSet.
+type SetStickerPositionInSetOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // SetStickerPositionInSet Use this method to move a sticker in a set created by the bot to a specific position. Returns True on success.
 // - sticker (type string): File identifier of the sticker
 // - position (type int64): New sticker position in the set, zero-based
 // https://core.telegram.org/bots/api#setstickerpositioninset
-func (bot *Bot) SetStickerPositionInSet(sticker string, position int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("sticker", sticker)
-	v.Add("position", strconv.FormatInt(position, 10))
+func (bot *Bot) SetStickerPositionInSet(sticker string, position int64, opts *SetStickerPositionInSetOpts) (bool, error) {
+	v := map[string]string{}
+	v["sticker"] = sticker
+	v["position"] = strconv.FormatInt(position, 10)
 
-	r, err := bot.Get("setStickerPositionInSet", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setStickerPositionInSet", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3220,36 +4201,38 @@ func (bot *Bot) SetStickerPositionInSet(sticker string, position int64) (bool, e
 
 // SetStickerSetThumbOpts is the set of optional fields for Bot.SetStickerSetThumb.
 type SetStickerSetThumbOpts struct {
-	// A PNG image with the thumbnail, must be up to 128 kilobytes in size and have width and height exactly 100px, or a TGS animation with the thumbnail up to 32 kilobytes in size; see https://core.telegram.org/animated_stickers#technical-requirements for animated sticker technical requirements. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More info on Sending Files: https://core.telegram.org/bots/api#sending-files. Animated sticker set thumbnail can't be uploaded via HTTP URL.
+	// A PNG image with the thumbnail, must be up to 128 kilobytes in size and have width and height exactly 100px, or a TGS animation with the thumbnail up to 32 kilobytes in size; see https://core.telegram.org/stickers#animated-sticker-requirements for animated sticker technical requirements, or a WEBM video with the thumbnail up to 32 kilobytes in size; see https://core.telegram.org/stickers#video-sticker-requirements for video sticker technical requirements. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. More information on Sending Files: https://core.telegram.org/bots/api#sending-files. Animated sticker set thumbnails can't be uploaded via HTTP URL.
 	Thumb InputFile
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// SetStickerSetThumb Use this method to set the thumbnail of a sticker set. Animated thumbnails can be set for animated sticker sets only. Returns True on success.
+// SetStickerSetThumb Use this method to set the thumbnail of a sticker set. Animated thumbnails can be set for animated sticker sets only. Video thumbnails can be set only for video sticker sets only. Returns True on success.
 // - name (type string): Sticker set name
-// - user_id (type int64): User identifier of the sticker set owner
+// - userId (type int64): User identifier of the sticker set owner
 // - opts (type SetStickerSetThumbOpts): All optional parameters.
 // https://core.telegram.org/bots/api#setstickersetthumb
 func (bot *Bot) SetStickerSetThumb(name string, userId int64, opts *SetStickerSetThumbOpts) (bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("name", name)
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+	v["name"] = name
+	v["user_id"] = strconv.FormatInt(userId, 10)
 	if opts != nil {
 		if opts.Thumb != nil {
 			switch m := opts.Thumb.(type) {
 			case string:
-				v.Add("thumb", m)
+				v["thumb"] = m
 
 			case NamedReader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = m
 
 			case io.Reader:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("thumb", "attach://thumb")
+				v["thumb"] = "attach://thumb"
 				data["thumb"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
@@ -3258,7 +4241,12 @@ func (bot *Bot) SetStickerSetThumb(name string, userId int64, opts *SetStickerSe
 		}
 	}
 
-	r, err := bot.Post("setStickerSetThumb", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setStickerSetThumb", v, data, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3273,57 +4261,67 @@ type SetWebhookOpts struct {
 	Certificate InputFile
 	// The fixed IP address which will be used to send webhook requests instead of the IP address resolved through DNS
 	IpAddress string
-	// Maximum allowed number of simultaneous HTTPS connections to the webhook for update delivery, 1-100. Defaults to 40. Use lower values to limit the load on your bot's server, and higher values to increase your bot's throughput.
+	// The maximum allowed number of simultaneous HTTPS connections to the webhook for update delivery, 1-100. Defaults to 40. Use lower values to limit the load on your bot's server, and higher values to increase your bot's throughput.
 	MaxConnections int64
 	// A JSON-serialized list of the update types you want your bot to receive. For example, specify ["message", "edited_channel_post", "callback_query"] to only receive updates of these types. See Update for a complete list of available update types. Specify an empty list to receive all update types except chat_member (default). If not specified, the previous setting will be used. Please note that this parameter doesn't affect updates created before the call to the setWebhook, so unwanted updates may be received for a short period of time.
 	AllowedUpdates []string
 	// Pass True to drop all pending updates
 	DropPendingUpdates bool
+	// A secret token to be sent in a header "X-Telegram-Bot-Api-Secret-Token" in every webhook request, 1-256 characters. Only characters A-Z, a-z, 0-9, _ and - are allowed. The header is useful to ensure that the request comes from a webhook set by you.
+	SecretToken string
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
-// SetWebhook Use this method to specify a url and receive incoming updates via an outgoing webhook. Whenever there is an update for the bot, we will send an HTTPS POST request to the specified url, containing a JSON-serialized Update. In case of an unsuccessful request, we will give up after a reasonable amount of attempts. Returns True on success.
-// If you'd like to make sure that the Webhook request comes from Telegram, we recommend using a secret path in the URL, e.g. https://www.example.com/<token>. Since nobody else knows your bot's token, you can be pretty sure it's us.
-// - url (type string): HTTPS url to send updates to. Use an empty string to remove webhook integration
+// SetWebhook Use this method to specify a URL and receive incoming updates via an outgoing webhook. Whenever there is an update for the bot, we will send an HTTPS POST request to the specified URL, containing a JSON-serialized Update. In case of an unsuccessful request, we will give up after a reasonable amount of attempts. Returns True on success.
+// If you'd like to make sure that the webhook was set by you, you can specify secret data in the parameter secret_token. If specified, the request will contain a header "X-Telegram-Bot-Api-Secret-Token" with the secret token as content.
+// - url (type string): HTTPS URL to send updates to. Use an empty string to remove webhook integration
 // - opts (type SetWebhookOpts): All optional parameters.
 // https://core.telegram.org/bots/api#setwebhook
 func (bot *Bot) SetWebhook(url string, opts *SetWebhookOpts) (bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("url", url)
+	v["url"] = url
 	if opts != nil {
 		if opts.Certificate != nil {
 			switch m := opts.Certificate.(type) {
 			case NamedReader:
-				v.Add("certificate", "attach://certificate")
+				v["certificate"] = "attach://certificate"
 				data["certificate"] = m
 
 			case io.Reader:
-				v.Add("certificate", "attach://certificate")
+				v["certificate"] = "attach://certificate"
 				data["certificate"] = NamedFile{File: m}
 
 			case []byte:
-				v.Add("certificate", "attach://certificate")
+				v["certificate"] = "attach://certificate"
 				data["certificate"] = NamedFile{File: bytes.NewReader(m)}
 
 			default:
 				return false, fmt.Errorf("unknown type for InputFile: %T", opts.Certificate)
 			}
 		}
-		v.Add("ip_address", opts.IpAddress)
+		v["ip_address"] = opts.IpAddress
 		if opts.MaxConnections != 0 {
-			v.Add("max_connections", strconv.FormatInt(opts.MaxConnections, 10))
+			v["max_connections"] = strconv.FormatInt(opts.MaxConnections, 10)
 		}
 		if opts.AllowedUpdates != nil {
 			bs, err := json.Marshal(opts.AllowedUpdates)
 			if err != nil {
 				return false, fmt.Errorf("failed to marshal field allowed_updates: %w", err)
 			}
-			v.Add("allowed_updates", string(bs))
+			v["allowed_updates"] = string(bs)
 		}
-		v.Add("drop_pending_updates", strconv.FormatBool(opts.DropPendingUpdates))
+		v["drop_pending_updates"] = strconv.FormatBool(opts.DropPendingUpdates)
+		v["secret_token"] = opts.SecretToken
 	}
 
-	r, err := bot.Post("setWebhook", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("setWebhook", v, data, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3342,29 +4340,36 @@ type StopMessageLiveLocationOpts struct {
 	InlineMessageId string
 	// A JSON-serialized object for a new inline keyboard.
 	ReplyMarkup InlineKeyboardMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // StopMessageLiveLocation Use this method to stop updating a live location message before live_period expires. On success, if the message is not an inline message, the edited Message is returned, otherwise True is returned.
 // - opts (type StopMessageLiveLocationOpts): All optional parameters.
 // https://core.telegram.org/bots/api#stopmessagelivelocation
 func (bot *Bot) StopMessageLiveLocation(opts *StopMessageLiveLocationOpts) (*Message, bool, error) {
-	v := urlLib.Values{}
+	v := map[string]string{}
 	if opts != nil {
 		if opts.ChatId != 0 {
-			v.Add("chat_id", strconv.FormatInt(opts.ChatId, 10))
+			v["chat_id"] = strconv.FormatInt(opts.ChatId, 10)
 		}
 		if opts.MessageId != 0 {
-			v.Add("message_id", strconv.FormatInt(opts.MessageId, 10))
+			v["message_id"] = strconv.FormatInt(opts.MessageId, 10)
 		}
-		v.Add("inline_message_id", opts.InlineMessageId)
+		v["inline_message_id"] = opts.InlineMessageId
 		bs, err := json.Marshal(opts.ReplyMarkup)
 		if err != nil {
 			return nil, false, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 		}
-		v.Add("reply_markup", string(bs))
+		v["reply_markup"] = string(bs)
 	}
 
-	r, err := bot.Get("stopMessageLiveLocation", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("stopMessageLiveLocation", v, nil, reqOpts)
 	if err != nil {
 		return nil, false, err
 	}
@@ -3385,26 +4390,33 @@ func (bot *Bot) StopMessageLiveLocation(opts *StopMessageLiveLocationOpts) (*Mes
 type StopPollOpts struct {
 	// A JSON-serialized object for a new message inline keyboard.
 	ReplyMarkup InlineKeyboardMarkup
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // StopPoll Use this method to stop a poll which was sent by the bot. On success, the stopped Poll is returned.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - message_id (type int64): Identifier of the original message with the poll
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - messageId (type int64): Identifier of the original message with the poll
 // - opts (type StopPollOpts): All optional parameters.
 // https://core.telegram.org/bots/api#stoppoll
 func (bot *Bot) StopPoll(chatId int64, messageId int64, opts *StopPollOpts) (*Poll, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("message_id", strconv.FormatInt(messageId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["message_id"] = strconv.FormatInt(messageId, 10)
 	if opts != nil {
 		bs, err := json.Marshal(opts.ReplyMarkup)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal field reply_markup: %w", err)
 		}
-		v.Add("reply_markup", string(bs))
+		v["reply_markup"] = string(bs)
 	}
 
-	r, err := bot.Get("stopPoll", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("stopPoll", v, nil, reqOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -3417,40 +4429,58 @@ func (bot *Bot) StopPoll(chatId int64, messageId int64, opts *StopPollOpts) (*Po
 type UnbanChatMemberOpts struct {
 	// Do nothing if the user is not banned
 	OnlyIfBanned bool
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // UnbanChatMember Use this method to unban a previously banned user in a supergroup or channel. The user will not return to the group or channel automatically, but will be able to join via link, etc. The bot must be an administrator for this to work. By default, this method guarantees that after the call the user is not a member of the chat, but will be able to join it. So if the user is a member of the chat they will also be removed from the chat. If you don't want this, use the parameter only_if_banned. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target group or username of the target supergroup or channel (in the format @username)
-// - user_id (type int64): Unique identifier of the target user
+// - chatId (type int64): Unique identifier for the target group or username of the target supergroup or channel (in the format @channelusername)
+// - userId (type int64): Unique identifier of the target user
 // - opts (type UnbanChatMemberOpts): All optional parameters.
 // https://core.telegram.org/bots/api#unbanchatmember
 func (bot *Bot) UnbanChatMember(chatId int64, userId int64, opts *UnbanChatMemberOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["user_id"] = strconv.FormatInt(userId, 10)
 	if opts != nil {
-		v.Add("only_if_banned", strconv.FormatBool(opts.OnlyIfBanned))
+		v["only_if_banned"] = strconv.FormatBool(opts.OnlyIfBanned)
 	}
 
-	r, err := bot.Get("unbanChatMember", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("unbanChatMember", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
 
 	var b bool
 	return b, json.Unmarshal(r, &b)
+}
+
+// UnbanChatSenderChatOpts is the set of optional fields for Bot.UnbanChatSenderChat.
+type UnbanChatSenderChatOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // UnbanChatSenderChat Use this method to unban a previously banned channel chat in a supergroup or channel. The bot must be an administrator for this to work and must have the appropriate administrator rights. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// - sender_chat_id (type int64): Unique identifier of the target sender chat
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - senderChatId (type int64): Unique identifier of the target sender chat
 // https://core.telegram.org/bots/api#unbanchatsenderchat
-func (bot *Bot) UnbanChatSenderChat(chatId int64, senderChatId int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
-	v.Add("sender_chat_id", strconv.FormatInt(senderChatId, 10))
+func (bot *Bot) UnbanChatSenderChat(chatId int64, senderChatId int64, opts *UnbanChatSenderChatOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+	v["sender_chat_id"] = strconv.FormatInt(senderChatId, 10)
 
-	r, err := bot.Get("unbanChatSenderChat", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("unbanChatSenderChat", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3459,14 +4489,25 @@ func (bot *Bot) UnbanChatSenderChat(chatId int64, senderChatId int64) (bool, err
 	return b, json.Unmarshal(r, &b)
 }
 
-// UnpinAllChatMessages Use this method to clear the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
-// https://core.telegram.org/bots/api#unpinallchatmessages
-func (bot *Bot) UnpinAllChatMessages(chatId int64) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+// UnpinAllChatMessagesOpts is the set of optional fields for Bot.UnpinAllChatMessages.
+type UnpinAllChatMessagesOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
 
-	r, err := bot.Get("unpinAllChatMessages", v)
+// UnpinAllChatMessages Use this method to clear the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns True on success.
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// https://core.telegram.org/bots/api#unpinallchatmessages
+func (bot *Bot) UnpinAllChatMessages(chatId int64, opts *UnpinAllChatMessagesOpts) (bool, error) {
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
+
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("unpinAllChatMessages", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3479,22 +4520,29 @@ func (bot *Bot) UnpinAllChatMessages(chatId int64) (bool, error) {
 type UnpinChatMessageOpts struct {
 	// Identifier of a message to unpin. If not specified, the most recent pinned message (by sending date) will be unpinned.
 	MessageId int64
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
 }
 
 // UnpinChatMessage Use this method to remove a message from the list of pinned messages in a chat. If the chat is not a private chat, the bot must be an administrator in the chat for this to work and must have the 'can_pin_messages' administrator right in a supergroup or 'can_edit_messages' administrator right in a channel. Returns True on success.
-// - chat_id (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
+// - chatId (type int64): Unique identifier for the target chat or username of the target channel (in the format @channelusername)
 // - opts (type UnpinChatMessageOpts): All optional parameters.
 // https://core.telegram.org/bots/api#unpinchatmessage
 func (bot *Bot) UnpinChatMessage(chatId int64, opts *UnpinChatMessageOpts) (bool, error) {
-	v := urlLib.Values{}
-	v.Add("chat_id", strconv.FormatInt(chatId, 10))
+	v := map[string]string{}
+	v["chat_id"] = strconv.FormatInt(chatId, 10)
 	if opts != nil {
 		if opts.MessageId != 0 {
-			v.Add("message_id", strconv.FormatInt(opts.MessageId, 10))
+			v["message_id"] = strconv.FormatInt(opts.MessageId, 10)
 		}
 	}
 
-	r, err := bot.Get("unpinChatMessage", v)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("unpinChatMessage", v, nil, reqOpts)
 	if err != nil {
 		return false, err
 	}
@@ -3503,26 +4551,32 @@ func (bot *Bot) UnpinChatMessage(chatId int64, opts *UnpinChatMessageOpts) (bool
 	return b, json.Unmarshal(r, &b)
 }
 
+// UploadStickerFileOpts is the set of optional fields for Bot.UploadStickerFile.
+type UploadStickerFileOpts struct {
+	// RequestOpts are an additional optional field to configure timeouts for individual requests
+	RequestOpts *RequestOpts
+}
+
 // UploadStickerFile Use this method to upload a .PNG file with a sticker for later use in createNewStickerSet and addStickerToSet methods (can be used multiple times). Returns the uploaded File on success.
-// - user_id (type int64): User identifier of sticker file owner
-// - png_sticker (type InputFile): PNG image with the sticker, must be up to 512 kilobytes in size, dimensions must not exceed 512px, and either width or height must be exactly 512px. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+// - userId (type int64): User identifier of sticker file owner
+// - pngSticker (type InputFile): PNG image with the sticker, must be up to 512 kilobytes in size, dimensions must not exceed 512px, and either width or height must be exactly 512px. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 // https://core.telegram.org/bots/api#uploadstickerfile
-func (bot *Bot) UploadStickerFile(userId int64, pngSticker InputFile) (*File, error) {
-	v := urlLib.Values{}
+func (bot *Bot) UploadStickerFile(userId int64, pngSticker InputFile, opts *UploadStickerFileOpts) (*File, error) {
+	v := map[string]string{}
 	data := map[string]NamedReader{}
-	v.Add("user_id", strconv.FormatInt(userId, 10))
+	v["user_id"] = strconv.FormatInt(userId, 10)
 	if pngSticker != nil {
 		switch m := pngSticker.(type) {
 		case NamedReader:
-			v.Add("png_sticker", "attach://png_sticker")
+			v["png_sticker"] = "attach://png_sticker"
 			data["png_sticker"] = m
 
 		case io.Reader:
-			v.Add("png_sticker", "attach://png_sticker")
+			v["png_sticker"] = "attach://png_sticker"
 			data["png_sticker"] = NamedFile{File: m}
 
 		case []byte:
-			v.Add("png_sticker", "attach://png_sticker")
+			v["png_sticker"] = "attach://png_sticker"
 			data["png_sticker"] = NamedFile{File: bytes.NewReader(m)}
 
 		default:
@@ -3530,7 +4584,12 @@ func (bot *Bot) UploadStickerFile(userId int64, pngSticker InputFile) (*File, er
 		}
 	}
 
-	r, err := bot.Post("uploadStickerFile", v, data)
+	var reqOpts *RequestOpts
+	if opts != nil {
+		reqOpts = opts.RequestOpts
+	}
+
+	r, err := bot.Request("uploadStickerFile", v, data, reqOpts)
 	if err != nil {
 		return nil, err
 	}
