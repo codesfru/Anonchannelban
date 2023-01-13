@@ -29,16 +29,13 @@ output:
 linters:
   disable-all: true
   enable:
-    - deadcode
     - errcheck
     - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - structcheck
     - typecheck
     - unused
-    - varcheck
     - asciicheck
     - bodyclose
     - bodyclose
@@ -56,7 +53,7 @@ linters:
     - gomoddirectives
     - goprintffuncname
     - gosec
-    - ifshort
+    #    - ifshort
     - importas
     #    - lll
     - makezero
@@ -65,8 +62,8 @@ linters:
     #    - nilassign
     - nilerr
     - noctx
-    - nolintlint
-    - paralleltest
+    #    - nolintlint
+    #    - paralleltest
     - prealloc
     - promlinter
     - tagliatelle
@@ -85,6 +82,14 @@ issues:
       linters:
         - prealloc
         - goerr113
+    # Exclude some `staticcheck` messages.
+    - linters:
+        - staticcheck
+      text: "SA1019:" # warning about "strings.Title" being deprecated for unicode issue; we dont need unicode here.
+    - linters:
+        - gosec
+      text: "G404:" # warning about insecure math/rand. We dont care about this in tests!
+      path: "\\w*_test.go"
 
   # Enable default excludes, for common sense values.
   exclude-use-default: true
@@ -114,6 +119,5 @@ linters-settings:
       # use the struct field name to check the name of the struct tag
       use-field-name: true
       rules:
-        # any struct tag type can be used.
-        # support string case: `camel`, `pascal`, `kebab`, `snake`, `goCamel`, `goPascal`, `goKebab`, `goSnake`, `upper`, `lower`
+        # JSON must use snake case
         json: snake
