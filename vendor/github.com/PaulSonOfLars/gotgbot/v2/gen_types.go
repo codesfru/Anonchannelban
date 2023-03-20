@@ -10,11 +10,13 @@ import (
 )
 
 type ReplyMarkup interface {
+	// replyMarkup exists to avoid external types implementing this interface.
 	replyMarkup()
 }
 
-// Animation This object represents an animation file (GIF or H.264/MPEG-4 AVC video without sound).
-// https://core.telegram.org/bots/api#animation
+// Animation (https://core.telegram.org/bots/api#animation)
+//
+// This object represents an animation file (GIF or H.264/MPEG-4 AVC video without sound).
 type Animation struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
@@ -27,17 +29,18 @@ type Animation struct {
 	// Duration of the video in seconds as defined by sender
 	Duration int64 `json:"duration"`
 	// Optional. Animation thumbnail as defined by sender
-	Thumb *PhotoSize `json:"thumb,omitempty"`
+	Thumbnail *PhotoSize `json:"thumbnail,omitempty"`
 	// Optional. Original animation filename as defined by sender
 	FileName string `json:"file_name,omitempty"`
 	// Optional. MIME type of the file as defined by sender
 	MimeType string `json:"mime_type,omitempty"`
-	// Optional. File size in bytes
+	// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
 	FileSize int64 `json:"file_size,omitempty"`
 }
 
-// Audio This object represents an audio file to be treated as music by the Telegram clients.
-// https://core.telegram.org/bots/api#audio
+// Audio (https://core.telegram.org/bots/api#audio)
+//
+// This object represents an audio file to be treated as music by the Telegram clients.
 type Audio struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
@@ -53,14 +56,15 @@ type Audio struct {
 	FileName string `json:"file_name,omitempty"`
 	// Optional. MIME type of the file as defined by sender
 	MimeType string `json:"mime_type,omitempty"`
-	// Optional. File size in bytes
+	// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
 	FileSize int64 `json:"file_size,omitempty"`
 	// Optional. Thumbnail of the album cover to which the music file belongs
-	Thumb *PhotoSize `json:"thumb,omitempty"`
+	Thumbnail *PhotoSize `json:"thumbnail,omitempty"`
 }
 
-// BotCommand This object represents a bot command.
-// https://core.telegram.org/bots/api#botcommand
+// BotCommand (https://core.telegram.org/bots/api#botcommand)
+//
+// This object represents a bot command.
 type BotCommand struct {
 	// Text of the command; 1-32 characters. Can contain only lowercase English letters, digits and underscores.
 	Command string `json:"command"`
@@ -68,17 +72,19 @@ type BotCommand struct {
 	Description string `json:"description"`
 }
 
-// BotCommandScope This object represents the scope to which bot commands are applied. Currently, the following 7 scopes are supported:
-// - BotCommandScopeDefault
-// - BotCommandScopeAllPrivateChats
-// - BotCommandScopeAllGroupChats
-// - BotCommandScopeAllChatAdministrators
-// - BotCommandScopeChat
-// - BotCommandScopeChatAdministrators
-// - BotCommandScopeChatMember
-// https://core.telegram.org/bots/api#botcommandscope
+// BotCommandScope (https://core.telegram.org/bots/api#botcommandscope)
+//
+// This object represents the scope to which bot commands are applied. Currently, the following 7 scopes are supported:
+//   - BotCommandScopeDefault
+//   - BotCommandScopeAllPrivateChats
+//   - BotCommandScopeAllGroupChats
+//   - BotCommandScopeAllChatAdministrators
+//   - BotCommandScopeChat
+//   - BotCommandScopeChatAdministrators
+//   - BotCommandScopeChatMember
 type BotCommandScope interface {
 	GetType() string
+	// botCommandScope exists to avoid external types implementing this interface.
 	botCommandScope()
 	// MergeBotCommandScope returns a MergedBotCommandScope struct to simplify working with complex telegram types in a non-generic world.
 	MergeBotCommandScope() MergedBotCommandScope
@@ -107,8 +113,9 @@ func (v MergedBotCommandScope) MergeBotCommandScope() MergedBotCommandScope {
 	return v
 }
 
-// BotCommandScopeAllChatAdministrators Represents the scope of bot commands, covering all group and supergroup chat administrators.
-// https://core.telegram.org/bots/api#botcommandscopeallchatadministrators
+// BotCommandScopeAllChatAdministrators (https://core.telegram.org/bots/api#botcommandscopeallchatadministrators)
+//
+// Represents the scope of bot commands, covering all group and supergroup chat administrators.
 type BotCommandScopeAllChatAdministrators struct{}
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -139,8 +146,9 @@ func (v BotCommandScopeAllChatAdministrators) MarshalJSON() ([]byte, error) {
 // BotCommandScopeAllChatAdministrators.botCommandScope is a dummy method to avoid interface implementation.
 func (v BotCommandScopeAllChatAdministrators) botCommandScope() {}
 
-// BotCommandScopeAllGroupChats Represents the scope of bot commands, covering all group and supergroup chats.
-// https://core.telegram.org/bots/api#botcommandscopeallgroupchats
+// BotCommandScopeAllGroupChats (https://core.telegram.org/bots/api#botcommandscopeallgroupchats)
+//
+// Represents the scope of bot commands, covering all group and supergroup chats.
 type BotCommandScopeAllGroupChats struct{}
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -171,8 +179,9 @@ func (v BotCommandScopeAllGroupChats) MarshalJSON() ([]byte, error) {
 // BotCommandScopeAllGroupChats.botCommandScope is a dummy method to avoid interface implementation.
 func (v BotCommandScopeAllGroupChats) botCommandScope() {}
 
-// BotCommandScopeAllPrivateChats Represents the scope of bot commands, covering all private chats.
-// https://core.telegram.org/bots/api#botcommandscopeallprivatechats
+// BotCommandScopeAllPrivateChats (https://core.telegram.org/bots/api#botcommandscopeallprivatechats)
+//
+// Represents the scope of bot commands, covering all private chats.
 type BotCommandScopeAllPrivateChats struct{}
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -203,8 +212,9 @@ func (v BotCommandScopeAllPrivateChats) MarshalJSON() ([]byte, error) {
 // BotCommandScopeAllPrivateChats.botCommandScope is a dummy method to avoid interface implementation.
 func (v BotCommandScopeAllPrivateChats) botCommandScope() {}
 
-// BotCommandScopeChat Represents the scope of bot commands, covering a specific chat.
-// https://core.telegram.org/bots/api#botcommandscopechat
+// BotCommandScopeChat (https://core.telegram.org/bots/api#botcommandscopechat)
+//
+// Represents the scope of bot commands, covering a specific chat.
 type BotCommandScopeChat struct {
 	// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
 	ChatId int64 `json:"chat_id"`
@@ -239,8 +249,9 @@ func (v BotCommandScopeChat) MarshalJSON() ([]byte, error) {
 // BotCommandScopeChat.botCommandScope is a dummy method to avoid interface implementation.
 func (v BotCommandScopeChat) botCommandScope() {}
 
-// BotCommandScopeChatAdministrators Represents the scope of bot commands, covering all administrators of a specific group or supergroup chat.
-// https://core.telegram.org/bots/api#botcommandscopechatadministrators
+// BotCommandScopeChatAdministrators (https://core.telegram.org/bots/api#botcommandscopechatadministrators)
+//
+// Represents the scope of bot commands, covering all administrators of a specific group or supergroup chat.
 type BotCommandScopeChatAdministrators struct {
 	// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
 	ChatId int64 `json:"chat_id"`
@@ -275,8 +286,9 @@ func (v BotCommandScopeChatAdministrators) MarshalJSON() ([]byte, error) {
 // BotCommandScopeChatAdministrators.botCommandScope is a dummy method to avoid interface implementation.
 func (v BotCommandScopeChatAdministrators) botCommandScope() {}
 
-// BotCommandScopeChatMember Represents the scope of bot commands, covering a specific member of a group or supergroup chat.
-// https://core.telegram.org/bots/api#botcommandscopechatmember
+// BotCommandScopeChatMember (https://core.telegram.org/bots/api#botcommandscopechatmember)
+//
+// Represents the scope of bot commands, covering a specific member of a group or supergroup chat.
 type BotCommandScopeChatMember struct {
 	// Unique identifier for the target chat or username of the target supergroup (in the format @supergroupusername)
 	ChatId int64 `json:"chat_id"`
@@ -314,8 +326,9 @@ func (v BotCommandScopeChatMember) MarshalJSON() ([]byte, error) {
 // BotCommandScopeChatMember.botCommandScope is a dummy method to avoid interface implementation.
 func (v BotCommandScopeChatMember) botCommandScope() {}
 
-// BotCommandScopeDefault Represents the default scope of bot commands. Default commands are used if no commands with a narrower scope are specified for the user.
-// https://core.telegram.org/bots/api#botcommandscopedefault
+// BotCommandScopeDefault (https://core.telegram.org/bots/api#botcommandscopedefault)
+//
+// Represents the default scope of bot commands. Default commands are used if no commands with a narrower scope are specified for the user.
 type BotCommandScopeDefault struct{}
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -346,12 +359,30 @@ func (v BotCommandScopeDefault) MarshalJSON() ([]byte, error) {
 // BotCommandScopeDefault.botCommandScope is a dummy method to avoid interface implementation.
 func (v BotCommandScopeDefault) botCommandScope() {}
 
-// CallbackGame A placeholder, currently holds no information. Use BotFather to set up your game.
-// https://core.telegram.org/bots/api#callbackgame
+// BotDescription (https://core.telegram.org/bots/api#botdescription)
+//
+// This object represents the bot's description.
+type BotDescription struct {
+	// The bot's description
+	Description string `json:"description"`
+}
+
+// BotShortDescription (https://core.telegram.org/bots/api#botshortdescription)
+//
+// This object represents the bot's short description.
+type BotShortDescription struct {
+	// The bot's short description
+	ShortDescription string `json:"short_description"`
+}
+
+// CallbackGame (https://core.telegram.org/bots/api#callbackgame)
+//
+// A placeholder, currently holds no information. Use BotFather to set up your game.
 type CallbackGame struct{}
 
-// CallbackQuery This object represents an incoming callback query from a callback button in an inline keyboard. If the button that originated the query was attached to a message sent by the bot, the field message will be present. If the button was attached to a message sent via the bot (in inline mode), the field inline_message_id will be present. Exactly one of the fields data or game_short_name will be present.
-// https://core.telegram.org/bots/api#callbackquery
+// CallbackQuery (https://core.telegram.org/bots/api#callbackquery)
+//
+// This object represents an incoming callback query from a callback button in an inline keyboard. If the button that originated the query was attached to a message sent by the bot, the field message will be present. If the button was attached to a message sent via the bot (in inline mode), the field inline_message_id will be present. Exactly one of the fields data or game_short_name will be present.
 type CallbackQuery struct {
 	// Unique identifier for this query
 	Id string `json:"id"`
@@ -363,14 +394,15 @@ type CallbackQuery struct {
 	InlineMessageId string `json:"inline_message_id,omitempty"`
 	// Global identifier, uniquely corresponding to the chat to which the message with the callback button was sent. Useful for high scores in games.
 	ChatInstance string `json:"chat_instance"`
-	// Optional. Data associated with the callback button. Be aware that a bad client can send arbitrary data in this field.
+	// Optional. Data associated with the callback button. Be aware that the message originated the query can contain no callback buttons with this data.
 	Data string `json:"data,omitempty"`
 	// Optional. Short name of a Game to be returned, serves as the unique identifier for the game
 	GameShortName string `json:"game_short_name,omitempty"`
 }
 
-// Chat This object represents a chat.
-// https://core.telegram.org/bots/api#chat
+// Chat (https://core.telegram.org/bots/api#chat)
+//
+// This object represents a chat.
 type Chat struct {
 	// Unique identifier for this chat. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this identifier.
 	Id int64 `json:"id"`
@@ -384,12 +416,24 @@ type Chat struct {
 	FirstName string `json:"first_name,omitempty"`
 	// Optional. Last name of the other party in a private chat
 	LastName string `json:"last_name,omitempty"`
+	// Optional. True, if the supergroup chat is a forum (has topics enabled)
+	IsForum bool `json:"is_forum,omitempty"`
 	// Optional. Chat photo. Returned only in getChat.
 	Photo *ChatPhoto `json:"photo,omitempty"`
+	// Optional. If non-empty, the list of all active chat usernames; for private chats, supergroups and channels. Returned only in getChat.
+	ActiveUsernames []string `json:"active_usernames,omitempty"`
+	// Optional. Custom emoji identifier of emoji status of the other party in a private chat. Returned only in getChat.
+	EmojiStatusCustomEmojiId string `json:"emoji_status_custom_emoji_id,omitempty"`
 	// Optional. Bio of the other party in a private chat. Returned only in getChat.
 	Bio string `json:"bio,omitempty"`
 	// Optional. True, if privacy settings of the other party in the private chat allows to use tg://user?id=<user_id> links only in chats with the user. Returned only in getChat.
 	HasPrivateForwards bool `json:"has_private_forwards,omitempty"`
+	// Optional. True, if the privacy settings of the other party restrict sending voice and video note messages in the private chat. Returned only in getChat.
+	HasRestrictedVoiceAndVideoMessages bool `json:"has_restricted_voice_and_video_messages,omitempty"`
+	// Optional. True, if users need to join the supergroup before they can send messages. Returned only in getChat.
+	JoinToSendMessages bool `json:"join_to_send_messages,omitempty"`
+	// Optional. True, if all users directly joining the supergroup need to be approved by supergroup administrators. Returned only in getChat.
+	JoinByRequest bool `json:"join_by_request,omitempty"`
 	// Optional. Description, for groups, supergroups and channel chats. Returned only in getChat.
 	Description string `json:"description,omitempty"`
 	// Optional. Primary invite link, for groups, supergroups and channel chats. Returned only in getChat.
@@ -402,6 +446,10 @@ type Chat struct {
 	SlowModeDelay int64 `json:"slow_mode_delay,omitempty"`
 	// Optional. The time after which all messages sent to the chat will be automatically deleted; in seconds. Returned only in getChat.
 	MessageAutoDeleteTime int64 `json:"message_auto_delete_time,omitempty"`
+	// Optional. True, if aggressive anti-spam checks are enabled in the supergroup. The field is only available to chat administrators. Returned only in getChat.
+	HasAggressiveAntiSpamEnabled bool `json:"has_aggressive_anti_spam_enabled,omitempty"`
+	// Optional. True, if non-administrators can only get the list of bots and administrators in the chat. Returned only in getChat.
+	HasHiddenMembers bool `json:"has_hidden_members,omitempty"`
 	// Optional. True, if messages from the chat can't be forwarded to other chats. Returned only in getChat.
 	HasProtectedContent bool `json:"has_protected_content,omitempty"`
 	// Optional. For supergroups, name of group sticker set. Returned only in getChat.
@@ -414,8 +462,39 @@ type Chat struct {
 	Location *ChatLocation `json:"location,omitempty"`
 }
 
-// ChatInviteLink Represents an invite link for a chat.
-// https://core.telegram.org/bots/api#chatinvitelink
+// ChatAdministratorRights (https://core.telegram.org/bots/api#chatadministratorrights)
+//
+// Represents the rights of an administrator in a chat.
+type ChatAdministratorRights struct {
+	// True, if the user's presence in the chat is hidden
+	IsAnonymous bool `json:"is_anonymous"`
+	// True, if the administrator can access the chat event log, chat statistics, message statistics in channels, see channel members, see anonymous administrators in supergroups and ignore slow mode. Implied by any other administrator privilege
+	CanManageChat bool `json:"can_manage_chat"`
+	// True, if the administrator can delete messages of other users
+	CanDeleteMessages bool `json:"can_delete_messages"`
+	// True, if the administrator can manage video chats
+	CanManageVideoChats bool `json:"can_manage_video_chats"`
+	// True, if the administrator can restrict, ban or unban chat members
+	CanRestrictMembers bool `json:"can_restrict_members"`
+	// True, if the administrator can add new administrators with a subset of their own privileges or demote administrators that they have promoted, directly or indirectly (promoted by administrators that were appointed by the user)
+	CanPromoteMembers bool `json:"can_promote_members"`
+	// True, if the user is allowed to change the chat title, photo and other settings
+	CanChangeInfo bool `json:"can_change_info"`
+	// True, if the user is allowed to invite new users to the chat
+	CanInviteUsers bool `json:"can_invite_users"`
+	// Optional. True, if the administrator can post in the channel; channels only
+	CanPostMessages bool `json:"can_post_messages,omitempty"`
+	// Optional. True, if the administrator can edit messages of other users and can pin messages; channels only
+	CanEditMessages bool `json:"can_edit_messages,omitempty"`
+	// Optional. True, if the user is allowed to pin messages; groups and supergroups only
+	CanPinMessages bool `json:"can_pin_messages,omitempty"`
+	// Optional. True, if the user is allowed to create, rename, close, and reopen forum topics; supergroups only
+	CanManageTopics bool `json:"can_manage_topics,omitempty"`
+}
+
+// ChatInviteLink (https://core.telegram.org/bots/api#chatinvitelink)
+//
+// Represents an invite link for a chat.
 type ChatInviteLink struct {
 	// The invite link. If the link was created by another chat administrator, then the second part of the link will be replaced with "...".
 	InviteLink string `json:"invite_link"`
@@ -431,19 +510,22 @@ type ChatInviteLink struct {
 	Name string `json:"name,omitempty"`
 	// Optional. Point in time (Unix timestamp) when the link will expire or has been expired
 	ExpireDate int64 `json:"expire_date,omitempty"`
-	// Optional. Maximum number of users that can be members of the chat simultaneously after joining the chat via this invite link; 1-99999
+	// Optional. The maximum number of users that can be members of the chat simultaneously after joining the chat via this invite link; 1-99999
 	MemberLimit int64 `json:"member_limit,omitempty"`
 	// Optional. Number of pending join requests created using this link
 	PendingJoinRequestCount int64 `json:"pending_join_request_count,omitempty"`
 }
 
-// ChatJoinRequest Represents a join request sent to a chat.
-// https://core.telegram.org/bots/api#chatjoinrequest
+// ChatJoinRequest (https://core.telegram.org/bots/api#chatjoinrequest)
+//
+// Represents a join request sent to a chat.
 type ChatJoinRequest struct {
 	// Chat to which the request was sent
 	Chat Chat `json:"chat"`
 	// User that sent the join request
 	From User `json:"from"`
+	// Identifier of a private chat with the user who sent the join request. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a 64-bit integer or double-precision float type are safe for storing this identifier. The bot can use this identifier for 24 hours to send messages until the join request is processed, assuming no other administrator contacted the user.
+	UserChatId int64 `json:"user_chat_id"`
 	// Date the request was sent in Unix time
 	Date int64 `json:"date"`
 	// Optional. Bio of the user.
@@ -452,8 +534,9 @@ type ChatJoinRequest struct {
 	InviteLink *ChatInviteLink `json:"invite_link,omitempty"`
 }
 
-// ChatLocation Represents a location to which a chat is connected.
-// https://core.telegram.org/bots/api#chatlocation
+// ChatLocation (https://core.telegram.org/bots/api#chatlocation)
+//
+// Represents a location to which a chat is connected.
 type ChatLocation struct {
 	// The location to which the supergroup is connected. Can't be a live location.
 	Location Location `json:"location"`
@@ -461,17 +544,19 @@ type ChatLocation struct {
 	Address string `json:"address"`
 }
 
-// ChatMember This object contains information about one member of a chat. Currently, the following 6 types of chat members are supported:
-// - ChatMemberOwner
-// - ChatMemberAdministrator
-// - ChatMemberMember
-// - ChatMemberRestricted
-// - ChatMemberLeft
-// - ChatMemberBanned
-// https://core.telegram.org/bots/api#chatmember
+// ChatMember (https://core.telegram.org/bots/api#chatmember)
+//
+// This object contains information about one member of a chat. Currently, the following 6 types of chat members are supported:
+//   - ChatMemberOwner
+//   - ChatMemberAdministrator
+//   - ChatMemberMember
+//   - ChatMemberRestricted
+//   - ChatMemberLeft
+//   - ChatMemberBanned
 type ChatMember interface {
 	GetStatus() string
 	GetUser() User
+	// chatMember exists to avoid external types implementing this interface.
 	chatMember()
 	// MergeChatMember returns a MergedChatMember struct to simplify working with complex telegram types in a non-generic world.
 	MergeChatMember() MergedChatMember
@@ -493,11 +578,11 @@ type MergedChatMember struct {
 	CanManageChat bool `json:"can_manage_chat,omitempty"`
 	// Optional. True, if the administrator can delete messages of other users (Only for administrator)
 	CanDeleteMessages bool `json:"can_delete_messages,omitempty"`
-	// Optional. True, if the administrator can manage voice chats (Only for administrator)
-	CanManageVoiceChats bool `json:"can_manage_voice_chats,omitempty"`
+	// Optional. True, if the administrator can manage video chats (Only for administrator)
+	CanManageVideoChats bool `json:"can_manage_video_chats,omitempty"`
 	// Optional. True, if the administrator can restrict, ban or unban chat members (Only for administrator)
 	CanRestrictMembers bool `json:"can_restrict_members,omitempty"`
-	// Optional. True, if the administrator can add new administrators with a subset of their own privileges or demote administrators that he has promoted, directly or indirectly (promoted by administrators that were appointed by the user) (Only for administrator)
+	// Optional. True, if the administrator can add new administrators with a subset of their own privileges or demote administrators that they have promoted, directly or indirectly (promoted by administrators that were appointed by the user) (Only for administrator)
 	CanPromoteMembers bool `json:"can_promote_members,omitempty"`
 	// Optional. True, if the user is allowed to change the chat title, photo and other settings (Only for administrator, restricted)
 	CanChangeInfo bool `json:"can_change_info,omitempty"`
@@ -509,12 +594,24 @@ type MergedChatMember struct {
 	CanEditMessages bool `json:"can_edit_messages,omitempty"`
 	// Optional. True, if the user is allowed to pin messages; groups and supergroups only (Only for administrator, restricted)
 	CanPinMessages bool `json:"can_pin_messages,omitempty"`
+	// Optional. True, if the user is allowed to create, rename, close, and reopen forum topics; supergroups only (Only for administrator, restricted)
+	CanManageTopics bool `json:"can_manage_topics,omitempty"`
 	// Optional. True, if the user is a member of the chat at the moment of the request (Only for restricted)
 	IsMember bool `json:"is_member,omitempty"`
-	// Optional. True, if the user is allowed to send text messages, contacts, locations and venues (Only for restricted)
+	// Optional. True, if the user is allowed to send text messages, contacts, invoices, locations and venues (Only for restricted)
 	CanSendMessages bool `json:"can_send_messages,omitempty"`
-	// Optional. True, if the user is allowed to send audios, documents, photos, videos, video notes and voice notes (Only for restricted)
-	CanSendMediaMessages bool `json:"can_send_media_messages,omitempty"`
+	// Optional. True, if the user is allowed to send audios (Only for restricted)
+	CanSendAudios bool `json:"can_send_audios,omitempty"`
+	// Optional. True, if the user is allowed to send documents (Only for restricted)
+	CanSendDocuments bool `json:"can_send_documents,omitempty"`
+	// Optional. True, if the user is allowed to send photos (Only for restricted)
+	CanSendPhotos bool `json:"can_send_photos,omitempty"`
+	// Optional. True, if the user is allowed to send videos (Only for restricted)
+	CanSendVideos bool `json:"can_send_videos,omitempty"`
+	// Optional. True, if the user is allowed to send video notes (Only for restricted)
+	CanSendVideoNotes bool `json:"can_send_video_notes,omitempty"`
+	// Optional. True, if the user is allowed to send voice notes (Only for restricted)
+	CanSendVoiceNotes bool `json:"can_send_voice_notes,omitempty"`
 	// Optional. True, if the user is allowed to send polls (Only for restricted)
 	CanSendPolls bool `json:"can_send_polls,omitempty"`
 	// Optional. True, if the user is allowed to send animations, games, stickers and use inline bots (Only for restricted)
@@ -632,8 +729,9 @@ func unmarshalChatMember(d json.RawMessage) (ChatMember, error) {
 	return nil, fmt.Errorf("unknown interface with Status %v", t.Status)
 }
 
-// ChatMemberAdministrator Represents a chat member that has some additional privileges.
-// https://core.telegram.org/bots/api#chatmemberadministrator
+// ChatMemberAdministrator (https://core.telegram.org/bots/api#chatmemberadministrator)
+//
+// Represents a chat member that has some additional privileges.
 type ChatMemberAdministrator struct {
 	// Information about the user
 	User User `json:"user"`
@@ -645,11 +743,11 @@ type ChatMemberAdministrator struct {
 	CanManageChat bool `json:"can_manage_chat"`
 	// True, if the administrator can delete messages of other users
 	CanDeleteMessages bool `json:"can_delete_messages"`
-	// True, if the administrator can manage voice chats
-	CanManageVoiceChats bool `json:"can_manage_voice_chats"`
+	// True, if the administrator can manage video chats
+	CanManageVideoChats bool `json:"can_manage_video_chats"`
 	// True, if the administrator can restrict, ban or unban chat members
 	CanRestrictMembers bool `json:"can_restrict_members"`
-	// True, if the administrator can add new administrators with a subset of their own privileges or demote administrators that he has promoted, directly or indirectly (promoted by administrators that were appointed by the user)
+	// True, if the administrator can add new administrators with a subset of their own privileges or demote administrators that they have promoted, directly or indirectly (promoted by administrators that were appointed by the user)
 	CanPromoteMembers bool `json:"can_promote_members"`
 	// True, if the user is allowed to change the chat title, photo and other settings
 	CanChangeInfo bool `json:"can_change_info"`
@@ -661,6 +759,8 @@ type ChatMemberAdministrator struct {
 	CanEditMessages bool `json:"can_edit_messages,omitempty"`
 	// Optional. True, if the user is allowed to pin messages; groups and supergroups only
 	CanPinMessages bool `json:"can_pin_messages,omitempty"`
+	// Optional. True, if the user is allowed to create, rename, close, and reopen forum topics; supergroups only
+	CanManageTopics bool `json:"can_manage_topics,omitempty"`
 	// Optional. Custom title for this user
 	CustomTitle string `json:"custom_title,omitempty"`
 }
@@ -684,7 +784,7 @@ func (v ChatMemberAdministrator) MergeChatMember() MergedChatMember {
 		IsAnonymous:         v.IsAnonymous,
 		CanManageChat:       v.CanManageChat,
 		CanDeleteMessages:   v.CanDeleteMessages,
-		CanManageVoiceChats: v.CanManageVoiceChats,
+		CanManageVideoChats: v.CanManageVideoChats,
 		CanRestrictMembers:  v.CanRestrictMembers,
 		CanPromoteMembers:   v.CanPromoteMembers,
 		CanChangeInfo:       v.CanChangeInfo,
@@ -692,6 +792,7 @@ func (v ChatMemberAdministrator) MergeChatMember() MergedChatMember {
 		CanPostMessages:     v.CanPostMessages,
 		CanEditMessages:     v.CanEditMessages,
 		CanPinMessages:      v.CanPinMessages,
+		CanManageTopics:     v.CanManageTopics,
 		CustomTitle:         v.CustomTitle,
 	}
 }
@@ -712,8 +813,9 @@ func (v ChatMemberAdministrator) MarshalJSON() ([]byte, error) {
 // ChatMemberAdministrator.chatMember is a dummy method to avoid interface implementation.
 func (v ChatMemberAdministrator) chatMember() {}
 
-// ChatMemberBanned Represents a chat member that was banned in the chat and can't return to the chat or view chat messages.
-// https://core.telegram.org/bots/api#chatmemberbanned
+// ChatMemberBanned (https://core.telegram.org/bots/api#chatmemberbanned)
+//
+// Represents a chat member that was banned in the chat and can't return to the chat or view chat messages.
 type ChatMemberBanned struct {
 	// Information about the user
 	User User `json:"user"`
@@ -756,8 +858,9 @@ func (v ChatMemberBanned) MarshalJSON() ([]byte, error) {
 // ChatMemberBanned.chatMember is a dummy method to avoid interface implementation.
 func (v ChatMemberBanned) chatMember() {}
 
-// ChatMemberLeft Represents a chat member that isn't currently a member of the chat, but may join it themselves.
-// https://core.telegram.org/bots/api#chatmemberleft
+// ChatMemberLeft (https://core.telegram.org/bots/api#chatmemberleft)
+//
+// Represents a chat member that isn't currently a member of the chat, but may join it themselves.
 type ChatMemberLeft struct {
 	// Information about the user
 	User User `json:"user"`
@@ -797,8 +900,9 @@ func (v ChatMemberLeft) MarshalJSON() ([]byte, error) {
 // ChatMemberLeft.chatMember is a dummy method to avoid interface implementation.
 func (v ChatMemberLeft) chatMember() {}
 
-// ChatMemberMember Represents a chat member that has no additional privileges or restrictions.
-// https://core.telegram.org/bots/api#chatmembermember
+// ChatMemberMember (https://core.telegram.org/bots/api#chatmembermember)
+//
+// Represents a chat member that has no additional privileges or restrictions.
 type ChatMemberMember struct {
 	// Information about the user
 	User User `json:"user"`
@@ -838,8 +942,9 @@ func (v ChatMemberMember) MarshalJSON() ([]byte, error) {
 // ChatMemberMember.chatMember is a dummy method to avoid interface implementation.
 func (v ChatMemberMember) chatMember() {}
 
-// ChatMemberOwner Represents a chat member that owns the chat and has all administrator privileges.
-// https://core.telegram.org/bots/api#chatmemberowner
+// ChatMemberOwner (https://core.telegram.org/bots/api#chatmemberowner)
+//
+// Represents a chat member that owns the chat and has all administrator privileges.
 type ChatMemberOwner struct {
 	// Information about the user
 	User User `json:"user"`
@@ -885,29 +990,42 @@ func (v ChatMemberOwner) MarshalJSON() ([]byte, error) {
 // ChatMemberOwner.chatMember is a dummy method to avoid interface implementation.
 func (v ChatMemberOwner) chatMember() {}
 
-// ChatMemberRestricted Represents a chat member that is under certain restrictions in the chat. Supergroups only.
-// https://core.telegram.org/bots/api#chatmemberrestricted
+// ChatMemberRestricted (https://core.telegram.org/bots/api#chatmemberrestricted)
+//
+// Represents a chat member that is under certain restrictions in the chat. Supergroups only.
 type ChatMemberRestricted struct {
 	// Information about the user
 	User User `json:"user"`
 	// True, if the user is a member of the chat at the moment of the request
 	IsMember bool `json:"is_member"`
-	// True, if the user is allowed to change the chat title, photo and other settings
-	CanChangeInfo bool `json:"can_change_info"`
-	// True, if the user is allowed to invite new users to the chat
-	CanInviteUsers bool `json:"can_invite_users"`
-	// True, if the user is allowed to pin messages
-	CanPinMessages bool `json:"can_pin_messages"`
-	// True, if the user is allowed to send text messages, contacts, locations and venues
+	// True, if the user is allowed to send text messages, contacts, invoices, locations and venues
 	CanSendMessages bool `json:"can_send_messages"`
-	// True, if the user is allowed to send audios, documents, photos, videos, video notes and voice notes
-	CanSendMediaMessages bool `json:"can_send_media_messages"`
+	// True, if the user is allowed to send audios
+	CanSendAudios bool `json:"can_send_audios"`
+	// True, if the user is allowed to send documents
+	CanSendDocuments bool `json:"can_send_documents"`
+	// True, if the user is allowed to send photos
+	CanSendPhotos bool `json:"can_send_photos"`
+	// True, if the user is allowed to send videos
+	CanSendVideos bool `json:"can_send_videos"`
+	// True, if the user is allowed to send video notes
+	CanSendVideoNotes bool `json:"can_send_video_notes"`
+	// True, if the user is allowed to send voice notes
+	CanSendVoiceNotes bool `json:"can_send_voice_notes"`
 	// True, if the user is allowed to send polls
 	CanSendPolls bool `json:"can_send_polls"`
 	// True, if the user is allowed to send animations, games, stickers and use inline bots
 	CanSendOtherMessages bool `json:"can_send_other_messages"`
 	// True, if the user is allowed to add web page previews to their messages
 	CanAddWebPagePreviews bool `json:"can_add_web_page_previews"`
+	// True, if the user is allowed to change the chat title, photo and other settings
+	CanChangeInfo bool `json:"can_change_info"`
+	// True, if the user is allowed to invite new users to the chat
+	CanInviteUsers bool `json:"can_invite_users"`
+	// True, if the user is allowed to pin messages
+	CanPinMessages bool `json:"can_pin_messages"`
+	// True, if the user is allowed to create forum topics
+	CanManageTopics bool `json:"can_manage_topics"`
 	// Date when restrictions will be lifted for this user; unix time. If 0, then the user is restricted forever
 	UntilDate int64 `json:"until_date"`
 }
@@ -928,14 +1046,20 @@ func (v ChatMemberRestricted) MergeChatMember() MergedChatMember {
 		Status:                "restricted",
 		User:                  v.User,
 		IsMember:              v.IsMember,
-		CanChangeInfo:         v.CanChangeInfo,
-		CanInviteUsers:        v.CanInviteUsers,
-		CanPinMessages:        v.CanPinMessages,
 		CanSendMessages:       v.CanSendMessages,
-		CanSendMediaMessages:  v.CanSendMediaMessages,
+		CanSendAudios:         v.CanSendAudios,
+		CanSendDocuments:      v.CanSendDocuments,
+		CanSendPhotos:         v.CanSendPhotos,
+		CanSendVideos:         v.CanSendVideos,
+		CanSendVideoNotes:     v.CanSendVideoNotes,
+		CanSendVoiceNotes:     v.CanSendVoiceNotes,
 		CanSendPolls:          v.CanSendPolls,
 		CanSendOtherMessages:  v.CanSendOtherMessages,
 		CanAddWebPagePreviews: v.CanAddWebPagePreviews,
+		CanChangeInfo:         v.CanChangeInfo,
+		CanInviteUsers:        v.CanInviteUsers,
+		CanPinMessages:        v.CanPinMessages,
+		CanManageTopics:       v.CanManageTopics,
 		UntilDate:             v.UntilDate,
 	}
 }
@@ -956,8 +1080,9 @@ func (v ChatMemberRestricted) MarshalJSON() ([]byte, error) {
 // ChatMemberRestricted.chatMember is a dummy method to avoid interface implementation.
 func (v ChatMemberRestricted) chatMember() {}
 
-// ChatMemberUpdated This object represents changes in the status of a chat member.
-// https://core.telegram.org/bots/api#chatmemberupdated
+// ChatMemberUpdated (https://core.telegram.org/bots/api#chatmemberupdated)
+//
+// This object represents changes in the status of a chat member.
 type ChatMemberUpdated struct {
 	// Chat the user belongs to
 	Chat Chat `json:"chat"`
@@ -1006,18 +1131,29 @@ func (v *ChatMemberUpdated) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// ChatPermissions Describes actions that a non-administrator user is allowed to take in a chat.
-// https://core.telegram.org/bots/api#chatpermissions
+// ChatPermissions (https://core.telegram.org/bots/api#chatpermissions)
+//
+// Describes actions that a non-administrator user is allowed to take in a chat.
 type ChatPermissions struct {
-	// Optional. True, if the user is allowed to send text messages, contacts, locations and venues
+	// Optional. True, if the user is allowed to send text messages, contacts, invoices, locations and venues
 	CanSendMessages bool `json:"can_send_messages,omitempty"`
-	// Optional. True, if the user is allowed to send audios, documents, photos, videos, video notes and voice notes, implies can_send_messages
-	CanSendMediaMessages bool `json:"can_send_media_messages,omitempty"`
-	// Optional. True, if the user is allowed to send polls, implies can_send_messages
+	// Optional. True, if the user is allowed to send audios
+	CanSendAudios bool `json:"can_send_audios,omitempty"`
+	// Optional. True, if the user is allowed to send documents
+	CanSendDocuments bool `json:"can_send_documents,omitempty"`
+	// Optional. True, if the user is allowed to send photos
+	CanSendPhotos bool `json:"can_send_photos,omitempty"`
+	// Optional. True, if the user is allowed to send videos
+	CanSendVideos bool `json:"can_send_videos,omitempty"`
+	// Optional. True, if the user is allowed to send video notes
+	CanSendVideoNotes bool `json:"can_send_video_notes,omitempty"`
+	// Optional. True, if the user is allowed to send voice notes
+	CanSendVoiceNotes bool `json:"can_send_voice_notes,omitempty"`
+	// Optional. True, if the user is allowed to send polls
 	CanSendPolls bool `json:"can_send_polls,omitempty"`
-	// Optional. True, if the user is allowed to send animations, games, stickers and use inline bots, implies can_send_media_messages
+	// Optional. True, if the user is allowed to send animations, games, stickers and use inline bots
 	CanSendOtherMessages bool `json:"can_send_other_messages,omitempty"`
-	// Optional. True, if the user is allowed to add web page previews to their messages, implies can_send_media_messages
+	// Optional. True, if the user is allowed to add web page previews to their messages
 	CanAddWebPagePreviews bool `json:"can_add_web_page_previews,omitempty"`
 	// Optional. True, if the user is allowed to change the chat title, photo and other settings. Ignored in public supergroups
 	CanChangeInfo bool `json:"can_change_info,omitempty"`
@@ -1025,10 +1161,13 @@ type ChatPermissions struct {
 	CanInviteUsers bool `json:"can_invite_users,omitempty"`
 	// Optional. True, if the user is allowed to pin messages. Ignored in public supergroups
 	CanPinMessages bool `json:"can_pin_messages,omitempty"`
+	// Optional. True, if the user is allowed to create forum topics. If omitted defaults to the value of can_pin_messages
+	CanManageTopics bool `json:"can_manage_topics,omitempty"`
 }
 
-// ChatPhoto This object represents a chat photo.
-// https://core.telegram.org/bots/api#chatphoto
+// ChatPhoto (https://core.telegram.org/bots/api#chatphoto)
+//
+// This object represents a chat photo.
 type ChatPhoto struct {
 	// File identifier of small (160x160) chat photo. This file_id can be used only for photo download and only for as long as the photo is not changed.
 	SmallFileId string `json:"small_file_id"`
@@ -1040,9 +1179,20 @@ type ChatPhoto struct {
 	BigFileUniqueId string `json:"big_file_unique_id"`
 }
 
-// ChosenInlineResult Represents a result of an inline query that was chosen by the user and sent to their chat partner.
-// Note: It is necessary to enable inline feedback via @Botfather in order to receive these objects in updates.
-// https://core.telegram.org/bots/api#choseninlineresult
+// ChatShared (https://core.telegram.org/bots/api#chatshared)
+//
+// This object contains information about the chat whose identifier was shared with the bot using a KeyboardButtonRequestChat button.
+type ChatShared struct {
+	// Identifier of the request
+	RequestId int64 `json:"request_id"`
+	// Identifier of the shared chat. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a 64-bit integer or double-precision float type are safe for storing this identifier. The bot may not have access to the chat and could be unable to use this identifier, unless the chat is already known to the bot by some other means.
+	ChatId int64 `json:"chat_id"`
+}
+
+// ChosenInlineResult (https://core.telegram.org/bots/api#choseninlineresult)
+//
+// Represents a result of an inline query that was chosen by the user and sent to their chat partner.
+// Note: It is necessary to enable inline feedback via @BotFather in order to receive these objects in updates.
 type ChosenInlineResult struct {
 	// The unique identifier for the result that was chosen
 	ResultId string `json:"result_id"`
@@ -1056,8 +1206,9 @@ type ChosenInlineResult struct {
 	Query string `json:"query"`
 }
 
-// Contact This object represents a phone contact.
-// https://core.telegram.org/bots/api#contact
+// Contact (https://core.telegram.org/bots/api#contact)
+//
+// This object represents a phone contact.
 type Contact struct {
 	// Contact's phone number
 	PhoneNumber string `json:"phone_number"`
@@ -1071,8 +1222,9 @@ type Contact struct {
 	Vcard string `json:"vcard,omitempty"`
 }
 
-// Dice This object represents an animated emoji that displays a random value.
-// https://core.telegram.org/bots/api#dice
+// Dice (https://core.telegram.org/bots/api#dice)
+//
+// This object represents an animated emoji that displays a random value.
 type Dice struct {
 	// Emoji on which the dice throw animation is based
 	Emoji string `json:"emoji"`
@@ -1080,25 +1232,27 @@ type Dice struct {
 	Value int64 `json:"value"`
 }
 
-// Document This object represents a general file (as opposed to photos, voice messages and audio files).
-// https://core.telegram.org/bots/api#document
+// Document (https://core.telegram.org/bots/api#document)
+//
+// This object represents a general file (as opposed to photos, voice messages and audio files).
 type Document struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
 	// Unique identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
 	FileUniqueId string `json:"file_unique_id"`
 	// Optional. Document thumbnail as defined by sender
-	Thumb *PhotoSize `json:"thumb,omitempty"`
+	Thumbnail *PhotoSize `json:"thumbnail,omitempty"`
 	// Optional. Original filename as defined by sender
 	FileName string `json:"file_name,omitempty"`
 	// Optional. MIME type of the file as defined by sender
 	MimeType string `json:"mime_type,omitempty"`
-	// Optional. File size in bytes
+	// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
 	FileSize int64 `json:"file_size,omitempty"`
 }
 
-// EncryptedCredentials Contains data required for decrypting and authenticating EncryptedPassportElement. See the Telegram Passport Documentation for a complete description of the data decryption and authentication processes.
-// https://core.telegram.org/bots/api#encryptedcredentials
+// EncryptedCredentials (https://core.telegram.org/bots/api#encryptedcredentials)
+//
+// Describes data required for decrypting and authenticating EncryptedPassportElement. See the Telegram Passport Documentation for a complete description of the data decryption and authentication processes.
 type EncryptedCredentials struct {
 	// Base64-encoded encrypted JSON-serialized data with unique user's payload, data hashes and secrets required for EncryptedPassportElement decryption and authentication
 	Data string `json:"data"`
@@ -1108,8 +1262,9 @@ type EncryptedCredentials struct {
 	Secret string `json:"secret"`
 }
 
-// EncryptedPassportElement Contains information about documents or other Telegram Passport elements shared with the bot by the user.
-// https://core.telegram.org/bots/api#encryptedpassportelement
+// EncryptedPassportElement (https://core.telegram.org/bots/api#encryptedpassportelement)
+//
+// Describes documents or other Telegram Passport elements shared with the bot by the user.
 type EncryptedPassportElement struct {
 	// Element type. One of "personal_details", "passport", "driver_license", "identity_card", "internal_passport", "address", "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration", "phone_number", "email".
 	Type string `json:"type"`
@@ -1133,21 +1288,23 @@ type EncryptedPassportElement struct {
 	Hash string `json:"hash"`
 }
 
-// File This object represents a file ready to be downloaded. The file can be downloaded via the link https://api.telegram.org/file/bot<token>/<file_path>. It is guaranteed that the link will be valid for at least 1 hour. When the link expires, a new one can be requested by calling getFile.
-// https://core.telegram.org/bots/api#file
+// File (https://core.telegram.org/bots/api#file)
+//
+// This object represents a file ready to be downloaded. The file can be downloaded via the link https://api.telegram.org/file/bot<token>/<file_path>. It is guaranteed that the link will be valid for at least 1 hour. When the link expires, a new one can be requested by calling getFile.
 type File struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
 	// Unique identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
 	FileUniqueId string `json:"file_unique_id"`
-	// Optional. File size in bytes, if known
+	// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
 	FileSize int64 `json:"file_size,omitempty"`
 	// Optional. File path. Use https://api.telegram.org/file/bot<token>/<file_path> to get the file.
 	FilePath string `json:"file_path,omitempty"`
 }
 
-// ForceReply Upon receiving a message with this object, Telegram clients will display a reply interface to the user (act as if the user has selected the bot's message and tapped 'Reply'). This can be extremely useful if you want to create user-friendly step-by-step interfaces without having to sacrifice privacy mode.
-// https://core.telegram.org/bots/api#forcereply
+// ForceReply (https://core.telegram.org/bots/api#forcereply)
+//
+// Upon receiving a message with this object, Telegram clients will display a reply interface to the user (act as if the user has selected the bot's message and tapped 'Reply'). This can be extremely useful if you want to create user-friendly step-by-step interfaces without having to sacrifice privacy mode.
 type ForceReply struct {
 	// Shows reply interface to the user, as if they manually selected the bot's message and tapped 'Reply'
 	ForceReply bool `json:"force_reply"`
@@ -1160,8 +1317,55 @@ type ForceReply struct {
 // ForceReply.replyMarkup is a dummy method to avoid interface implementation.
 func (v ForceReply) replyMarkup() {}
 
-// Game This object represents a game. Use BotFather to create and edit games, their short names will act as unique identifiers.
-// https://core.telegram.org/bots/api#game
+// ForumTopic (https://core.telegram.org/bots/api#forumtopic)
+//
+// This object represents a forum topic.
+type ForumTopic struct {
+	// Unique identifier of the forum topic
+	MessageThreadId int64 `json:"message_thread_id"`
+	// Name of the topic
+	Name string `json:"name"`
+	// Color of the topic icon in RGB format
+	IconColor int64 `json:"icon_color"`
+	// Optional. Unique identifier of the custom emoji shown as the topic icon
+	IconCustomEmojiId string `json:"icon_custom_emoji_id,omitempty"`
+}
+
+// ForumTopicClosed (https://core.telegram.org/bots/api#forumtopicclosed)
+//
+// This object represents a service message about a forum topic closed in the chat. Currently holds no information.
+type ForumTopicClosed struct{}
+
+// ForumTopicCreated (https://core.telegram.org/bots/api#forumtopiccreated)
+//
+// This object represents a service message about a new forum topic created in the chat.
+type ForumTopicCreated struct {
+	// Name of the topic
+	Name string `json:"name"`
+	// Color of the topic icon in RGB format
+	IconColor int64 `json:"icon_color"`
+	// Optional. Unique identifier of the custom emoji shown as the topic icon
+	IconCustomEmojiId string `json:"icon_custom_emoji_id,omitempty"`
+}
+
+// ForumTopicEdited (https://core.telegram.org/bots/api#forumtopicedited)
+//
+// This object represents a service message about an edited forum topic.
+type ForumTopicEdited struct {
+	// Optional. New name of the topic, if it was edited
+	Name string `json:"name,omitempty"`
+	// Optional. New identifier of the custom emoji shown as the topic icon, if it was edited; an empty string if the icon was removed
+	IconCustomEmojiId string `json:"icon_custom_emoji_id,omitempty"`
+}
+
+// ForumTopicReopened (https://core.telegram.org/bots/api#forumtopicreopened)
+//
+// This object represents a service message about a forum topic reopened in the chat. Currently holds no information.
+type ForumTopicReopened struct{}
+
+// Game (https://core.telegram.org/bots/api#game)
+//
+// This object represents a game. Use BotFather to create and edit games, their short names will act as unique identifiers.
 type Game struct {
 	// Title of the game
 	Title string `json:"title"`
@@ -1177,8 +1381,9 @@ type Game struct {
 	Animation *Animation `json:"animation,omitempty"`
 }
 
-// GameHighScore This object represents one row of the high scores table for a game.
-// https://core.telegram.org/bots/api#gamehighscore
+// GameHighScore (https://core.telegram.org/bots/api#gamehighscore)
+//
+// This object represents one row of the high scores table for a game.
 type GameHighScore struct {
 	// Position in high score table for the game
 	Position int64 `json:"position"`
@@ -1188,20 +1393,33 @@ type GameHighScore struct {
 	Score int64 `json:"score"`
 }
 
-// InlineKeyboardButton This object represents one button of an inline keyboard. You must use exactly one of the optional fields.
-// https://core.telegram.org/bots/api#inlinekeyboardbutton
+// GeneralForumTopicHidden (https://core.telegram.org/bots/api#generalforumtopichidden)
+//
+// This object represents a service message about General forum topic hidden in the chat. Currently holds no information.
+type GeneralForumTopicHidden struct{}
+
+// GeneralForumTopicUnhidden (https://core.telegram.org/bots/api#generalforumtopicunhidden)
+//
+// This object represents a service message about General forum topic unhidden in the chat. Currently holds no information.
+type GeneralForumTopicUnhidden struct{}
+
+// InlineKeyboardButton (https://core.telegram.org/bots/api#inlinekeyboardbutton)
+//
+// This object represents one button of an inline keyboard. You must use exactly one of the optional fields.
 type InlineKeyboardButton struct {
 	// Label text on the button
 	Text string `json:"text"`
-	// Optional. HTTP or tg:// url to be opened when the button is pressed. Links tg://user?id=<user_id> can be used to mention a user by their ID without using a username, if this is allowed by their privacy settings.
+	// Optional. HTTP or tg:// URL to be opened when the button is pressed. Links tg://user?id=<user_id> can be used to mention a user by their ID without using a username, if this is allowed by their privacy settings.
 	Url string `json:"url,omitempty"`
-	// Optional. An HTTP URL used to automatically authorize the user. Can be used as a replacement for the Telegram Login Widget.
-	LoginUrl *LoginUrl `json:"login_url,omitempty"`
 	// Optional. Data to be sent in a callback query to the bot when button is pressed, 1-64 bytes
 	CallbackData string `json:"callback_data,omitempty"`
-	// Optional. If set, pressing the button will prompt the user to select one of their chats, open that chat and insert the bot's username and the specified inline query in the input field. Can be empty, in which case just the bot's username will be inserted. Note: This offers an easy way for users to start using your bot in inline mode when they are currently in a private chat with it. Especially useful when combined with switch_pm... actions - in this case the user will be automatically returned to the chat they switched from, skipping the chat selection screen.
+	// Optional. Description of the Web App that will be launched when the user presses the button. The Web App will be able to send an arbitrary message on behalf of the user using the method answerWebAppQuery. Available only in private chats between a user and the bot.
+	WebApp *WebAppInfo `json:"web_app,omitempty"`
+	// Optional. An HTTPS URL used to automatically authorize the user. Can be used as a replacement for the Telegram Login Widget.
+	LoginUrl *LoginUrl `json:"login_url,omitempty"`
+	// Optional. If set, pressing the button will prompt the user to select one of their chats, open that chat and insert the bot's username and the specified inline query in the input field. May be empty, in which case just the bot's username will be inserted. Note: This offers an easy way for users to start using your bot in inline mode when they are currently in a private chat with it. Especially useful when combined with switch_pm... actions - in this case the user will be automatically returned to the chat they switched from, skipping the chat selection screen.
 	SwitchInlineQuery *string `json:"switch_inline_query,omitempty"`
-	// Optional. If set, pressing the button will insert the bot's username and the specified inline query in the current chat's input field. Can be empty, in which case only the bot's username will be inserted. This offers a quick way for the user to open your bot in inline mode in the same chat - good for selecting something from multiple options.
+	// Optional. If set, pressing the button will insert the bot's username and the specified inline query in the current chat's input field. May be empty, in which case only the bot's username will be inserted. This offers a quick way for the user to open your bot in inline mode in the same chat - good for selecting something from multiple options.
 	SwitchInlineQueryCurrentChat *string `json:"switch_inline_query_current_chat,omitempty"`
 	// Optional. Description of the game that will be launched when the user presses the button. NOTE: This type of button must always be the first button in the first row.
 	CallbackGame *CallbackGame `json:"callback_game,omitempty"`
@@ -1209,9 +1427,10 @@ type InlineKeyboardButton struct {
 	Pay bool `json:"pay,omitempty"`
 }
 
-// InlineKeyboardMarkup This object represents an inline keyboard that appears right next to the message it belongs to.
+// InlineKeyboardMarkup (https://core.telegram.org/bots/api#inlinekeyboardmarkup)
+//
+// This object represents an inline keyboard that appears right next to the message it belongs to.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will display unsupported message.
-// https://core.telegram.org/bots/api#inlinekeyboardmarkup
 type InlineKeyboardMarkup struct {
 	// Array of button rows, each represented by an Array of InlineKeyboardButton objects
 	InlineKeyboard [][]InlineKeyboardButton `json:"inline_keyboard,omitempty"`
@@ -1220,8 +1439,9 @@ type InlineKeyboardMarkup struct {
 // InlineKeyboardMarkup.replyMarkup is a dummy method to avoid interface implementation.
 func (v InlineKeyboardMarkup) replyMarkup() {}
 
-// InlineQuery This object represents an incoming inline query. When the user sends an empty query, your bot could return some default or trending results.
-// https://core.telegram.org/bots/api#inlinequery
+// InlineQuery (https://core.telegram.org/bots/api#inlinequery)
+//
+// This object represents an incoming inline query. When the user sends an empty query, your bot could return some default or trending results.
 type InlineQuery struct {
 	// Unique identifier for this query
 	Id string `json:"id"`
@@ -1231,38 +1451,41 @@ type InlineQuery struct {
 	Query string `json:"query"`
 	// Offset of the results to be returned, can be controlled by the bot
 	Offset string `json:"offset"`
-	// Optional. Type of the chat, from which the inline query was sent. Can be either "sender" for a private chat with the inline query sender, "private", "group", "supergroup", or "channel". The chat type should be always known for requests sent from official clients and most third-party clients, unless the request was sent from a secret chat
+	// Optional. Type of the chat from which the inline query was sent. Can be either "sender" for a private chat with the inline query sender, "private", "group", "supergroup", or "channel". The chat type should be always known for requests sent from official clients and most third-party clients, unless the request was sent from a secret chat
 	ChatType string `json:"chat_type,omitempty"`
 	// Optional. Sender location, only for bots that request user location
 	Location *Location `json:"location,omitempty"`
 }
 
-// InlineQueryResult This object represents one result of an inline query. Telegram clients currently support results of the following 20 types:
-// - InlineQueryResultCachedAudio
-// - InlineQueryResultCachedDocument
-// - InlineQueryResultCachedGif
-// - InlineQueryResultCachedMpeg4Gif
-// - InlineQueryResultCachedPhoto
-// - InlineQueryResultCachedSticker
-// - InlineQueryResultCachedVideo
-// - InlineQueryResultCachedVoice
-// - InlineQueryResultArticle
-// - InlineQueryResultAudio
-// - InlineQueryResultContact
-// - InlineQueryResultGame
-// - InlineQueryResultDocument
-// - InlineQueryResultGif
-// - InlineQueryResultLocation
-// - InlineQueryResultMpeg4Gif
-// - InlineQueryResultPhoto
-// - InlineQueryResultVenue
-// - InlineQueryResultVideo
-// - InlineQueryResultVoice
+// InlineQueryResult (https://core.telegram.org/bots/api#inlinequeryresult)
+//
+// This object represents one result of an inline query. Telegram clients currently support results of the following 20 types:
+//   - InlineQueryResultCachedAudio
+//   - InlineQueryResultCachedDocument
+//   - InlineQueryResultCachedGif
+//   - InlineQueryResultCachedMpeg4Gif
+//   - InlineQueryResultCachedPhoto
+//   - InlineQueryResultCachedSticker
+//   - InlineQueryResultCachedVideo
+//   - InlineQueryResultCachedVoice
+//   - InlineQueryResultArticle
+//   - InlineQueryResultAudio
+//   - InlineQueryResultContact
+//   - InlineQueryResultGame
+//   - InlineQueryResultDocument
+//   - InlineQueryResultGif
+//   - InlineQueryResultLocation
+//   - InlineQueryResultMpeg4Gif
+//   - InlineQueryResultPhoto
+//   - InlineQueryResultVenue
+//   - InlineQueryResultVideo
+//   - InlineQueryResultVoice
+//
 // Note: All URLs passed in inline query results will be available to end users and therefore must be assumed to be public.
-// https://core.telegram.org/bots/api#inlinequeryresult
 type InlineQueryResult interface {
 	GetType() string
 	GetId() string
+	// inlineQueryResult exists to avoid external types implementing this interface.
 	inlineQueryResult()
 	// MergeInlineQueryResult returns a MergedInlineQueryResult struct to simplify working with complex telegram types in a non-generic world.
 	MergeInlineQueryResult() MergedInlineQueryResult
@@ -1294,7 +1517,7 @@ type MergedInlineQueryResult struct {
 	Description string `json:"description,omitempty"`
 	// Optional. A valid file identifier for the GIF file (Only for gif)
 	GifFileId string `json:"gif_file_id,omitempty"`
-	// Optional. A valid file identifier for the MP4 file (Only for mpeg4_gif)
+	// Optional. A valid file identifier for the MPEG4 file (Only for mpeg4_gif)
 	Mpeg4FileId string `json:"mpeg4_file_id,omitempty"`
 	// Optional. A valid file identifier of the photo (Only for photo)
 	PhotoFileId string `json:"photo_file_id,omitempty"`
@@ -1306,14 +1529,14 @@ type MergedInlineQueryResult struct {
 	VoiceFileId string `json:"voice_file_id,omitempty"`
 	// Optional. URL of the result (Only for article)
 	Url string `json:"url,omitempty"`
-	// Optional. Pass True, if you don't want the URL to be shown in the message (Only for article)
+	// Optional. Pass True if you don't want the URL to be shown in the message (Only for article)
 	HideUrl bool `json:"hide_url,omitempty"`
 	// Optional. Url of the thumbnail for the result (Only for article, contact, document, gif, location, mpeg4_gif, photo, venue, video)
-	ThumbUrl string `json:"thumb_url,omitempty"`
+	ThumbnailUrl string `json:"thumbnail_url,omitempty"`
 	// Optional. Thumbnail width (Only for article, contact, document, location, venue)
-	ThumbWidth int64 `json:"thumb_width,omitempty"`
+	ThumbnailWidth int64 `json:"thumbnail_width,omitempty"`
 	// Optional. Thumbnail height (Only for article, contact, document, location, venue)
-	ThumbHeight int64 `json:"thumb_height,omitempty"`
+	ThumbnailHeight int64 `json:"thumbnail_height,omitempty"`
 	// Optional. A valid URL for the audio file (Only for audio)
 	AudioUrl string `json:"audio_url,omitempty"`
 	// Optional. Performer (Only for audio)
@@ -1332,7 +1555,7 @@ type MergedInlineQueryResult struct {
 	GameShortName string `json:"game_short_name,omitempty"`
 	// Optional. A valid URL for the file (Only for document)
 	DocumentUrl string `json:"document_url,omitempty"`
-	// Optional. Mime type of the content of the file, either "application/pdf" or "application/zip" (Only for document, video)
+	// Optional. MIME type of the content of the file, either "application/pdf" or "application/zip" (Only for document, video)
 	MimeType string `json:"mime_type,omitempty"`
 	// Optional. A valid URL for the GIF file. File size must not exceed 1MB (Only for gif)
 	GifUrl string `json:"gif_url,omitempty"`
@@ -1343,7 +1566,7 @@ type MergedInlineQueryResult struct {
 	// Optional. Duration of the GIF in seconds (Only for gif)
 	GifDuration int64 `json:"gif_duration,omitempty"`
 	// Optional. MIME type of the thumbnail, must be one of "image/jpeg", "image/gif", or "video/mp4". Defaults to "image/jpeg" (Only for gif, mpeg4_gif)
-	ThumbMimeType string `json:"thumb_mime_type,omitempty"`
+	ThumbnailMimeType string `json:"thumbnail_mime_type,omitempty"`
 	// Optional. Location latitude in degrees (Only for location, venue)
 	Latitude float64 `json:"latitude,omitempty"`
 	// Optional. Location longitude in degrees (Only for location, venue)
@@ -1356,7 +1579,7 @@ type MergedInlineQueryResult struct {
 	Heading int64 `json:"heading,omitempty"`
 	// Optional. For live locations, a maximum distance for proximity alerts about approaching another chat member, in meters. Must be between 1 and 100000 if specified. (Only for location)
 	ProximityAlertRadius int64 `json:"proximity_alert_radius,omitempty"`
-	// Optional. A valid URL for the MP4 file. File size must not exceed 1MB (Only for mpeg4_gif)
+	// Optional. A valid URL for the MPEG4 file. File size must not exceed 1MB (Only for mpeg4_gif)
 	Mpeg4Url string `json:"mpeg4_url,omitempty"`
 	// Optional. Video width (Only for mpeg4_gif)
 	Mpeg4Width int64 `json:"mpeg4_width,omitempty"`
@@ -1412,8 +1635,9 @@ func (v MergedInlineQueryResult) MergeInlineQueryResult() MergedInlineQueryResul
 	return v
 }
 
-// InlineQueryResultArticle Represents a link to an article or web page.
-// https://core.telegram.org/bots/api#inlinequeryresultarticle
+// InlineQueryResultArticle (https://core.telegram.org/bots/api#inlinequeryresultarticle)
+//
+// Represents a link to an article or web page.
 type InlineQueryResultArticle struct {
 	// Unique identifier for this result, 1-64 Bytes
 	Id string `json:"id"`
@@ -1425,16 +1649,16 @@ type InlineQueryResultArticle struct {
 	ReplyMarkup *InlineKeyboardMarkup `json:"reply_markup,omitempty"`
 	// Optional. URL of the result
 	Url string `json:"url,omitempty"`
-	// Optional. Pass True, if you don't want the URL to be shown in the message
+	// Optional. Pass True if you don't want the URL to be shown in the message
 	HideUrl bool `json:"hide_url,omitempty"`
 	// Optional. Short description of the result
 	Description string `json:"description,omitempty"`
 	// Optional. Url of the thumbnail for the result
-	ThumbUrl string `json:"thumb_url,omitempty"`
+	ThumbnailUrl string `json:"thumbnail_url,omitempty"`
 	// Optional. Thumbnail width
-	ThumbWidth int64 `json:"thumb_width,omitempty"`
+	ThumbnailWidth int64 `json:"thumbnail_width,omitempty"`
 	// Optional. Thumbnail height
-	ThumbHeight int64 `json:"thumb_height,omitempty"`
+	ThumbnailHeight int64 `json:"thumbnail_height,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -1458,9 +1682,9 @@ func (v InlineQueryResultArticle) MergeInlineQueryResult() MergedInlineQueryResu
 		Url:                 v.Url,
 		HideUrl:             v.HideUrl,
 		Description:         v.Description,
-		ThumbUrl:            v.ThumbUrl,
-		ThumbWidth:          v.ThumbWidth,
-		ThumbHeight:         v.ThumbHeight,
+		ThumbnailUrl:        v.ThumbnailUrl,
+		ThumbnailWidth:      v.ThumbnailWidth,
+		ThumbnailHeight:     v.ThumbnailHeight,
 	}
 }
 
@@ -1480,9 +1704,10 @@ func (v InlineQueryResultArticle) MarshalJSON() ([]byte, error) {
 // InlineQueryResultArticle.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultArticle) inlineQueryResult() {}
 
-// InlineQueryResultAudio Represents a link to an MP3 audio file. By default, this audio file will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the audio.
+// InlineQueryResultAudio (https://core.telegram.org/bots/api#inlinequeryresultaudio)
+//
+// Represents a link to an MP3 audio file. By default, this audio file will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the audio.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultaudio
 type InlineQueryResultAudio struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -1549,9 +1774,10 @@ func (v InlineQueryResultAudio) MarshalJSON() ([]byte, error) {
 // InlineQueryResultAudio.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultAudio) inlineQueryResult() {}
 
-// InlineQueryResultCachedAudio Represents a link to an MP3 audio file stored on the Telegram servers. By default, this audio file will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the audio.
+// InlineQueryResultCachedAudio (https://core.telegram.org/bots/api#inlinequeryresultcachedaudio)
+//
+// Represents a link to an MP3 audio file stored on the Telegram servers. By default, this audio file will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the audio.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultcachedaudio
 type InlineQueryResultCachedAudio struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -1609,9 +1835,10 @@ func (v InlineQueryResultCachedAudio) MarshalJSON() ([]byte, error) {
 // InlineQueryResultCachedAudio.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultCachedAudio) inlineQueryResult() {}
 
-// InlineQueryResultCachedDocument Represents a link to a file stored on the Telegram servers. By default, this file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the file.
+// InlineQueryResultCachedDocument (https://core.telegram.org/bots/api#inlinequeryresultcacheddocument)
+//
+// Represents a link to a file stored on the Telegram servers. By default, this file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the file.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultcacheddocument
 type InlineQueryResultCachedDocument struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -1675,8 +1902,9 @@ func (v InlineQueryResultCachedDocument) MarshalJSON() ([]byte, error) {
 // InlineQueryResultCachedDocument.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultCachedDocument) inlineQueryResult() {}
 
-// InlineQueryResultCachedGif Represents a link to an animated GIF file stored on the Telegram servers. By default, this animated GIF file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with specified content instead of the animation.
-// https://core.telegram.org/bots/api#inlinequeryresultcachedgif
+// InlineQueryResultCachedGif (https://core.telegram.org/bots/api#inlinequeryresultcachedgif)
+//
+// Represents a link to an animated GIF file stored on the Telegram servers. By default, this animated GIF file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with specified content instead of the animation.
 type InlineQueryResultCachedGif struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -1737,12 +1965,13 @@ func (v InlineQueryResultCachedGif) MarshalJSON() ([]byte, error) {
 // InlineQueryResultCachedGif.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultCachedGif) inlineQueryResult() {}
 
-// InlineQueryResultCachedMpeg4Gif Represents a link to a video animation (H.264/MPEG-4 AVC video without sound) stored on the Telegram servers. By default, this animated MPEG-4 file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the animation.
-// https://core.telegram.org/bots/api#inlinequeryresultcachedmpeg4gif
+// InlineQueryResultCachedMpeg4Gif (https://core.telegram.org/bots/api#inlinequeryresultcachedmpeg4gif)
+//
+// Represents a link to a video animation (H.264/MPEG-4 AVC video without sound) stored on the Telegram servers. By default, this animated MPEG-4 file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the animation.
 type InlineQueryResultCachedMpeg4Gif struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
-	// A valid file identifier for the MP4 file
+	// A valid file identifier for the MPEG4 file
 	Mpeg4FileId string `json:"mpeg4_file_id"`
 	// Optional. Title for the result
 	Title string `json:"title,omitempty"`
@@ -1799,8 +2028,9 @@ func (v InlineQueryResultCachedMpeg4Gif) MarshalJSON() ([]byte, error) {
 // InlineQueryResultCachedMpeg4Gif.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultCachedMpeg4Gif) inlineQueryResult() {}
 
-// InlineQueryResultCachedPhoto Represents a link to a photo stored on the Telegram servers. By default, this photo will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the photo.
-// https://core.telegram.org/bots/api#inlinequeryresultcachedphoto
+// InlineQueryResultCachedPhoto (https://core.telegram.org/bots/api#inlinequeryresultcachedphoto)
+//
+// Represents a link to a photo stored on the Telegram servers. By default, this photo will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the photo.
 type InlineQueryResultCachedPhoto struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -1864,9 +2094,10 @@ func (v InlineQueryResultCachedPhoto) MarshalJSON() ([]byte, error) {
 // InlineQueryResultCachedPhoto.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultCachedPhoto) inlineQueryResult() {}
 
-// InlineQueryResultCachedSticker Represents a link to a sticker stored on the Telegram servers. By default, this sticker will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the sticker.
+// InlineQueryResultCachedSticker (https://core.telegram.org/bots/api#inlinequeryresultcachedsticker)
+//
+// Represents a link to a sticker stored on the Telegram servers. By default, this sticker will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the sticker.
 // Note: This will only work in Telegram versions released after 9 April, 2016 for static stickers and after 06 July, 2019 for animated stickers. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultcachedsticker
 type InlineQueryResultCachedSticker struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -1915,8 +2146,9 @@ func (v InlineQueryResultCachedSticker) MarshalJSON() ([]byte, error) {
 // InlineQueryResultCachedSticker.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultCachedSticker) inlineQueryResult() {}
 
-// InlineQueryResultCachedVideo Represents a link to a video file stored on the Telegram servers. By default, this video file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the video.
-// https://core.telegram.org/bots/api#inlinequeryresultcachedvideo
+// InlineQueryResultCachedVideo (https://core.telegram.org/bots/api#inlinequeryresultcachedvideo)
+//
+// Represents a link to a video file stored on the Telegram servers. By default, this video file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the video.
 type InlineQueryResultCachedVideo struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -1980,9 +2212,10 @@ func (v InlineQueryResultCachedVideo) MarshalJSON() ([]byte, error) {
 // InlineQueryResultCachedVideo.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultCachedVideo) inlineQueryResult() {}
 
-// InlineQueryResultCachedVoice Represents a link to a voice message stored on the Telegram servers. By default, this voice message will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the voice message.
+// InlineQueryResultCachedVoice (https://core.telegram.org/bots/api#inlinequeryresultcachedvoice)
+//
+// Represents a link to a voice message stored on the Telegram servers. By default, this voice message will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the voice message.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultcachedvoice
 type InlineQueryResultCachedVoice struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -2043,9 +2276,10 @@ func (v InlineQueryResultCachedVoice) MarshalJSON() ([]byte, error) {
 // InlineQueryResultCachedVoice.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultCachedVoice) inlineQueryResult() {}
 
-// InlineQueryResultContact Represents a contact with a phone number. By default, this contact will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the contact.
+// InlineQueryResultContact (https://core.telegram.org/bots/api#inlinequeryresultcontact)
+//
+// Represents a contact with a phone number. By default, this contact will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the contact.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultcontact
 type InlineQueryResultContact struct {
 	// Unique identifier for this result, 1-64 Bytes
 	Id string `json:"id"`
@@ -2062,11 +2296,11 @@ type InlineQueryResultContact struct {
 	// Optional. Content of the message to be sent instead of the contact
 	InputMessageContent *InputMessageContent `json:"input_message_content,omitempty"`
 	// Optional. Url of the thumbnail for the result
-	ThumbUrl string `json:"thumb_url,omitempty"`
+	ThumbnailUrl string `json:"thumbnail_url,omitempty"`
 	// Optional. Thumbnail width
-	ThumbWidth int64 `json:"thumb_width,omitempty"`
+	ThumbnailWidth int64 `json:"thumbnail_width,omitempty"`
 	// Optional. Thumbnail height
-	ThumbHeight int64 `json:"thumb_height,omitempty"`
+	ThumbnailHeight int64 `json:"thumbnail_height,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -2090,9 +2324,9 @@ func (v InlineQueryResultContact) MergeInlineQueryResult() MergedInlineQueryResu
 		Vcard:               v.Vcard,
 		ReplyMarkup:         v.ReplyMarkup,
 		InputMessageContent: v.InputMessageContent,
-		ThumbUrl:            v.ThumbUrl,
-		ThumbWidth:          v.ThumbWidth,
-		ThumbHeight:         v.ThumbHeight,
+		ThumbnailUrl:        v.ThumbnailUrl,
+		ThumbnailWidth:      v.ThumbnailWidth,
+		ThumbnailHeight:     v.ThumbnailHeight,
 	}
 }
 
@@ -2112,9 +2346,10 @@ func (v InlineQueryResultContact) MarshalJSON() ([]byte, error) {
 // InlineQueryResultContact.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultContact) inlineQueryResult() {}
 
-// InlineQueryResultDocument Represents a link to a file. By default, this file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the file. Currently, only .PDF and .ZIP files can be sent using this method.
+// InlineQueryResultDocument (https://core.telegram.org/bots/api#inlinequeryresultdocument)
+//
+// Represents a link to a file. By default, this file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the file. Currently, only .PDF and .ZIP files can be sent using this method.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultdocument
 type InlineQueryResultDocument struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -2128,7 +2363,7 @@ type InlineQueryResultDocument struct {
 	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
 	// A valid URL for the file
 	DocumentUrl string `json:"document_url"`
-	// Mime type of the content of the file, either "application/pdf" or "application/zip"
+	// MIME type of the content of the file, either "application/pdf" or "application/zip"
 	MimeType string `json:"mime_type"`
 	// Optional. Short description of the result
 	Description string `json:"description,omitempty"`
@@ -2137,11 +2372,11 @@ type InlineQueryResultDocument struct {
 	// Optional. Content of the message to be sent instead of the file
 	InputMessageContent *InputMessageContent `json:"input_message_content,omitempty"`
 	// Optional. URL of the thumbnail (JPEG only) for the file
-	ThumbUrl string `json:"thumb_url,omitempty"`
+	ThumbnailUrl string `json:"thumbnail_url,omitempty"`
 	// Optional. Thumbnail width
-	ThumbWidth int64 `json:"thumb_width,omitempty"`
+	ThumbnailWidth int64 `json:"thumbnail_width,omitempty"`
 	// Optional. Thumbnail height
-	ThumbHeight int64 `json:"thumb_height,omitempty"`
+	ThumbnailHeight int64 `json:"thumbnail_height,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -2168,9 +2403,9 @@ func (v InlineQueryResultDocument) MergeInlineQueryResult() MergedInlineQueryRes
 		Description:         v.Description,
 		ReplyMarkup:         v.ReplyMarkup,
 		InputMessageContent: v.InputMessageContent,
-		ThumbUrl:            v.ThumbUrl,
-		ThumbWidth:          v.ThumbWidth,
-		ThumbHeight:         v.ThumbHeight,
+		ThumbnailUrl:        v.ThumbnailUrl,
+		ThumbnailWidth:      v.ThumbnailWidth,
+		ThumbnailHeight:     v.ThumbnailHeight,
 	}
 }
 
@@ -2190,9 +2425,10 @@ func (v InlineQueryResultDocument) MarshalJSON() ([]byte, error) {
 // InlineQueryResultDocument.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultDocument) inlineQueryResult() {}
 
-// InlineQueryResultGame Represents a Game.
+// InlineQueryResultGame (https://core.telegram.org/bots/api#inlinequeryresultgame)
+//
+// Represents a Game.
 // Note: This will only work in Telegram versions released after October 1, 2016. Older clients will not display any inline results if a game result is among them.
-// https://core.telegram.org/bots/api#inlinequeryresultgame
 type InlineQueryResultGame struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -2238,8 +2474,9 @@ func (v InlineQueryResultGame) MarshalJSON() ([]byte, error) {
 // InlineQueryResultGame.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultGame) inlineQueryResult() {}
 
-// InlineQueryResultGif Represents a link to an animated GIF file. By default, this animated GIF file will be sent by the user with optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the animation.
-// https://core.telegram.org/bots/api#inlinequeryresultgif
+// InlineQueryResultGif (https://core.telegram.org/bots/api#inlinequeryresultgif)
+//
+// Represents a link to an animated GIF file. By default, this animated GIF file will be sent by the user with optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the animation.
 type InlineQueryResultGif struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -2252,9 +2489,9 @@ type InlineQueryResultGif struct {
 	// Optional. Duration of the GIF in seconds
 	GifDuration int64 `json:"gif_duration,omitempty"`
 	// URL of the static (JPEG or GIF) or animated (MPEG4) thumbnail for the result
-	ThumbUrl string `json:"thumb_url"`
+	ThumbnailUrl string `json:"thumbnail_url"`
 	// Optional. MIME type of the thumbnail, must be one of "image/jpeg", "image/gif", or "video/mp4". Defaults to "image/jpeg"
-	ThumbMimeType string `json:"thumb_mime_type,omitempty"`
+	ThumbnailMimeType string `json:"thumbnail_mime_type,omitempty"`
 	// Optional. Title for the result
 	Title string `json:"title,omitempty"`
 	// Optional. Caption of the GIF file to be sent, 0-1024 characters after entities parsing
@@ -2288,8 +2525,8 @@ func (v InlineQueryResultGif) MergeInlineQueryResult() MergedInlineQueryResult {
 		GifWidth:            v.GifWidth,
 		GifHeight:           v.GifHeight,
 		GifDuration:         v.GifDuration,
-		ThumbUrl:            v.ThumbUrl,
-		ThumbMimeType:       v.ThumbMimeType,
+		ThumbnailUrl:        v.ThumbnailUrl,
+		ThumbnailMimeType:   v.ThumbnailMimeType,
 		Title:               v.Title,
 		Caption:             v.Caption,
 		ParseMode:           v.ParseMode,
@@ -2315,9 +2552,10 @@ func (v InlineQueryResultGif) MarshalJSON() ([]byte, error) {
 // InlineQueryResultGif.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultGif) inlineQueryResult() {}
 
-// InlineQueryResultLocation Represents a location on a map. By default, the location will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the location.
+// InlineQueryResultLocation (https://core.telegram.org/bots/api#inlinequeryresultlocation)
+//
+// Represents a location on a map. By default, the location will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the location.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultlocation
 type InlineQueryResultLocation struct {
 	// Unique identifier for this result, 1-64 Bytes
 	Id string `json:"id"`
@@ -2340,11 +2578,11 @@ type InlineQueryResultLocation struct {
 	// Optional. Content of the message to be sent instead of the location
 	InputMessageContent *InputMessageContent `json:"input_message_content,omitempty"`
 	// Optional. Url of the thumbnail for the result
-	ThumbUrl string `json:"thumb_url,omitempty"`
+	ThumbnailUrl string `json:"thumbnail_url,omitempty"`
 	// Optional. Thumbnail width
-	ThumbWidth int64 `json:"thumb_width,omitempty"`
+	ThumbnailWidth int64 `json:"thumbnail_width,omitempty"`
 	// Optional. Thumbnail height
-	ThumbHeight int64 `json:"thumb_height,omitempty"`
+	ThumbnailHeight int64 `json:"thumbnail_height,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -2371,9 +2609,9 @@ func (v InlineQueryResultLocation) MergeInlineQueryResult() MergedInlineQueryRes
 		ProximityAlertRadius: v.ProximityAlertRadius,
 		ReplyMarkup:          v.ReplyMarkup,
 		InputMessageContent:  v.InputMessageContent,
-		ThumbUrl:             v.ThumbUrl,
-		ThumbWidth:           v.ThumbWidth,
-		ThumbHeight:          v.ThumbHeight,
+		ThumbnailUrl:         v.ThumbnailUrl,
+		ThumbnailWidth:       v.ThumbnailWidth,
+		ThumbnailHeight:      v.ThumbnailHeight,
 	}
 }
 
@@ -2393,12 +2631,13 @@ func (v InlineQueryResultLocation) MarshalJSON() ([]byte, error) {
 // InlineQueryResultLocation.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultLocation) inlineQueryResult() {}
 
-// InlineQueryResultMpeg4Gif Represents a link to a video animation (H.264/MPEG-4 AVC video without sound). By default, this animated MPEG-4 file will be sent by the user with optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the animation.
-// https://core.telegram.org/bots/api#inlinequeryresultmpeg4gif
+// InlineQueryResultMpeg4Gif (https://core.telegram.org/bots/api#inlinequeryresultmpeg4gif)
+//
+// Represents a link to a video animation (H.264/MPEG-4 AVC video without sound). By default, this animated MPEG-4 file will be sent by the user with optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the animation.
 type InlineQueryResultMpeg4Gif struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
-	// A valid URL for the MP4 file. File size must not exceed 1MB
+	// A valid URL for the MPEG4 file. File size must not exceed 1MB
 	Mpeg4Url string `json:"mpeg4_url"`
 	// Optional. Video width
 	Mpeg4Width int64 `json:"mpeg4_width,omitempty"`
@@ -2407,9 +2646,9 @@ type InlineQueryResultMpeg4Gif struct {
 	// Optional. Video duration in seconds
 	Mpeg4Duration int64 `json:"mpeg4_duration,omitempty"`
 	// URL of the static (JPEG or GIF) or animated (MPEG4) thumbnail for the result
-	ThumbUrl string `json:"thumb_url"`
+	ThumbnailUrl string `json:"thumbnail_url"`
 	// Optional. MIME type of the thumbnail, must be one of "image/jpeg", "image/gif", or "video/mp4". Defaults to "image/jpeg"
-	ThumbMimeType string `json:"thumb_mime_type,omitempty"`
+	ThumbnailMimeType string `json:"thumbnail_mime_type,omitempty"`
 	// Optional. Title for the result
 	Title string `json:"title,omitempty"`
 	// Optional. Caption of the MPEG-4 file to be sent, 0-1024 characters after entities parsing
@@ -2443,8 +2682,8 @@ func (v InlineQueryResultMpeg4Gif) MergeInlineQueryResult() MergedInlineQueryRes
 		Mpeg4Width:          v.Mpeg4Width,
 		Mpeg4Height:         v.Mpeg4Height,
 		Mpeg4Duration:       v.Mpeg4Duration,
-		ThumbUrl:            v.ThumbUrl,
-		ThumbMimeType:       v.ThumbMimeType,
+		ThumbnailUrl:        v.ThumbnailUrl,
+		ThumbnailMimeType:   v.ThumbnailMimeType,
 		Title:               v.Title,
 		Caption:             v.Caption,
 		ParseMode:           v.ParseMode,
@@ -2470,15 +2709,16 @@ func (v InlineQueryResultMpeg4Gif) MarshalJSON() ([]byte, error) {
 // InlineQueryResultMpeg4Gif.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultMpeg4Gif) inlineQueryResult() {}
 
-// InlineQueryResultPhoto Represents a link to a photo. By default, this photo will be sent by the user with optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the photo.
-// https://core.telegram.org/bots/api#inlinequeryresultphoto
+// InlineQueryResultPhoto (https://core.telegram.org/bots/api#inlinequeryresultphoto)
+//
+// Represents a link to a photo. By default, this photo will be sent by the user with optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the photo.
 type InlineQueryResultPhoto struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
 	// A valid URL of the photo. Photo must be in JPEG format. Photo size must not exceed 5MB
 	PhotoUrl string `json:"photo_url"`
 	// URL of the thumbnail for the photo
-	ThumbUrl string `json:"thumb_url"`
+	ThumbnailUrl string `json:"thumbnail_url"`
 	// Optional. Width of the photo
 	PhotoWidth int64 `json:"photo_width,omitempty"`
 	// Optional. Height of the photo
@@ -2515,7 +2755,7 @@ func (v InlineQueryResultPhoto) MergeInlineQueryResult() MergedInlineQueryResult
 		Type:                "photo",
 		Id:                  v.Id,
 		PhotoUrl:            v.PhotoUrl,
-		ThumbUrl:            v.ThumbUrl,
+		ThumbnailUrl:        v.ThumbnailUrl,
 		PhotoWidth:          v.PhotoWidth,
 		PhotoHeight:         v.PhotoHeight,
 		Title:               v.Title,
@@ -2544,9 +2784,10 @@ func (v InlineQueryResultPhoto) MarshalJSON() ([]byte, error) {
 // InlineQueryResultPhoto.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultPhoto) inlineQueryResult() {}
 
-// InlineQueryResultVenue Represents a venue. By default, the venue will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the venue.
+// InlineQueryResultVenue (https://core.telegram.org/bots/api#inlinequeryresultvenue)
+//
+// Represents a venue. By default, the venue will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the venue.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultvenue
 type InlineQueryResultVenue struct {
 	// Unique identifier for this result, 1-64 Bytes
 	Id string `json:"id"`
@@ -2571,11 +2812,11 @@ type InlineQueryResultVenue struct {
 	// Optional. Content of the message to be sent instead of the venue
 	InputMessageContent *InputMessageContent `json:"input_message_content,omitempty"`
 	// Optional. Url of the thumbnail for the result
-	ThumbUrl string `json:"thumb_url,omitempty"`
+	ThumbnailUrl string `json:"thumbnail_url,omitempty"`
 	// Optional. Thumbnail width
-	ThumbWidth int64 `json:"thumb_width,omitempty"`
+	ThumbnailWidth int64 `json:"thumbnail_width,omitempty"`
 	// Optional. Thumbnail height
-	ThumbHeight int64 `json:"thumb_height,omitempty"`
+	ThumbnailHeight int64 `json:"thumbnail_height,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -2603,9 +2844,9 @@ func (v InlineQueryResultVenue) MergeInlineQueryResult() MergedInlineQueryResult
 		GooglePlaceType:     v.GooglePlaceType,
 		ReplyMarkup:         v.ReplyMarkup,
 		InputMessageContent: v.InputMessageContent,
-		ThumbUrl:            v.ThumbUrl,
-		ThumbWidth:          v.ThumbWidth,
-		ThumbHeight:         v.ThumbHeight,
+		ThumbnailUrl:        v.ThumbnailUrl,
+		ThumbnailWidth:      v.ThumbnailWidth,
+		ThumbnailHeight:     v.ThumbnailHeight,
 	}
 }
 
@@ -2625,17 +2866,18 @@ func (v InlineQueryResultVenue) MarshalJSON() ([]byte, error) {
 // InlineQueryResultVenue.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultVenue) inlineQueryResult() {}
 
-// InlineQueryResultVideo Represents a link to a page containing an embedded video player or a video file. By default, this video file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the video.
-// https://core.telegram.org/bots/api#inlinequeryresultvideo
+// InlineQueryResultVideo (https://core.telegram.org/bots/api#inlinequeryresultvideo)
+//
+// Represents a link to a page containing an embedded video player or a video file. By default, this video file will be sent by the user with an optional caption. Alternatively, you can use input_message_content to send a message with the specified content instead of the video.
 type InlineQueryResultVideo struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
 	// A valid URL for the embedded video player or video file
 	VideoUrl string `json:"video_url"`
-	// Mime type of the content of video url, "text/html" or "video/mp4"
+	// MIME type of the content of the video URL, "text/html" or "video/mp4"
 	MimeType string `json:"mime_type"`
 	// URL of the thumbnail (JPEG only) for the video
-	ThumbUrl string `json:"thumb_url"`
+	ThumbnailUrl string `json:"thumbnail_url"`
 	// Title for the result
 	Title string `json:"title"`
 	// Optional. Caption of the video to be sent, 0-1024 characters after entities parsing
@@ -2675,7 +2917,7 @@ func (v InlineQueryResultVideo) MergeInlineQueryResult() MergedInlineQueryResult
 		Id:                  v.Id,
 		VideoUrl:            v.VideoUrl,
 		MimeType:            v.MimeType,
-		ThumbUrl:            v.ThumbUrl,
+		ThumbnailUrl:        v.ThumbnailUrl,
 		Title:               v.Title,
 		Caption:             v.Caption,
 		ParseMode:           v.ParseMode,
@@ -2705,9 +2947,10 @@ func (v InlineQueryResultVideo) MarshalJSON() ([]byte, error) {
 // InlineQueryResultVideo.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultVideo) inlineQueryResult() {}
 
-// InlineQueryResultVoice Represents a link to a voice recording in an .OGG container encoded with OPUS. By default, this voice recording will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the the voice message.
+// InlineQueryResultVoice (https://core.telegram.org/bots/api#inlinequeryresultvoice)
+//
+// Represents a link to a voice recording in an .OGG container encoded with OPUS. By default, this voice recording will be sent by the user. Alternatively, you can use input_message_content to send a message with the specified content instead of the the voice message.
 // Note: This will only work in Telegram versions released after 9 April, 2016. Older clients will ignore them.
-// https://core.telegram.org/bots/api#inlinequeryresultvoice
 type InlineQueryResultVoice struct {
 	// Unique identifier for this result, 1-64 bytes
 	Id string `json:"id"`
@@ -2771,8 +3014,9 @@ func (v InlineQueryResultVoice) MarshalJSON() ([]byte, error) {
 // InlineQueryResultVoice.inlineQueryResult is a dummy method to avoid interface implementation.
 func (v InlineQueryResultVoice) inlineQueryResult() {}
 
-// InputContactMessageContent Represents the content of a contact message to be sent as the result of an inline query.
-// https://core.telegram.org/bots/api#inputcontactmessagecontent
+// InputContactMessageContent (https://core.telegram.org/bots/api#inputcontactmessagecontent)
+//
+// Represents the content of a contact message to be sent as the result of an inline query.
 type InputContactMessageContent struct {
 	// Contact's phone number
 	PhoneNumber string `json:"phone_number"`
@@ -2787,12 +3031,14 @@ type InputContactMessageContent struct {
 // InputContactMessageContent.inputMessageContent is a dummy method to avoid interface implementation.
 func (v InputContactMessageContent) inputMessageContent() {}
 
-// InputFile This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser.
-// https://core.telegram.org/bots/api#inputfile
+// InputFile (https://core.telegram.org/bots/api#inputfile)
+//
+// This object represents the contents of a file to be uploaded. Must be posted using multipart/form-data in the usual way that files are uploaded via the browser.
 type InputFile interface{}
 
-// InputInvoiceMessageContent Represents the content of an invoice message to be sent as the result of an inline query.
-// https://core.telegram.org/bots/api#inputinvoicemessagecontent
+// InputInvoiceMessageContent (https://core.telegram.org/bots/api#inputinvoicemessagecontent)
+//
+// Represents the content of an invoice message to be sent as the result of an inline query.
 type InputInvoiceMessageContent struct {
 	// Product name, 1-32 characters
 	Title string `json:"title"`
@@ -2800,7 +3046,7 @@ type InputInvoiceMessageContent struct {
 	Description string `json:"description"`
 	// Bot-defined invoice payload, 1-128 bytes. This will not be displayed to the user, use for your internal processes.
 	Payload string `json:"payload"`
-	// Payment provider token, obtained via Botfather
+	// Payment provider token, obtained via @BotFather
 	ProviderToken string `json:"provider_token"`
 	// Three-letter ISO 4217 currency code, see more on currencies
 	Currency string `json:"currency"`
@@ -2812,35 +3058,36 @@ type InputInvoiceMessageContent struct {
 	SuggestedTipAmounts []int64 `json:"suggested_tip_amounts,omitempty"`
 	// Optional. A JSON-serialized object for data about the invoice, which will be shared with the payment provider. A detailed description of the required fields should be provided by the payment provider.
 	ProviderData string `json:"provider_data,omitempty"`
-	// Optional. URL of the product photo for the invoice. Can be a photo of the goods or a marketing image for a service. People like it better when they see what they are paying for.
+	// Optional. URL of the product photo for the invoice. Can be a photo of the goods or a marketing image for a service.
 	PhotoUrl string `json:"photo_url,omitempty"`
-	// Optional. Photo size
+	// Optional. Photo size in bytes
 	PhotoSize int64 `json:"photo_size,omitempty"`
 	// Optional. Photo width
 	PhotoWidth int64 `json:"photo_width,omitempty"`
 	// Optional. Photo height
 	PhotoHeight int64 `json:"photo_height,omitempty"`
-	// Optional. Pass True, if you require the user's full name to complete the order
+	// Optional. Pass True if you require the user's full name to complete the order
 	NeedName bool `json:"need_name,omitempty"`
-	// Optional. Pass True, if you require the user's phone number to complete the order
+	// Optional. Pass True if you require the user's phone number to complete the order
 	NeedPhoneNumber bool `json:"need_phone_number,omitempty"`
-	// Optional. Pass True, if you require the user's email address to complete the order
+	// Optional. Pass True if you require the user's email address to complete the order
 	NeedEmail bool `json:"need_email,omitempty"`
-	// Optional. Pass True, if you require the user's shipping address to complete the order
+	// Optional. Pass True if you require the user's shipping address to complete the order
 	NeedShippingAddress bool `json:"need_shipping_address,omitempty"`
-	// Optional. Pass True, if user's phone number should be sent to provider
+	// Optional. Pass True if the user's phone number should be sent to provider
 	SendPhoneNumberToProvider bool `json:"send_phone_number_to_provider,omitempty"`
-	// Optional. Pass True, if user's email address should be sent to provider
+	// Optional. Pass True if the user's email address should be sent to provider
 	SendEmailToProvider bool `json:"send_email_to_provider,omitempty"`
-	// Optional. Pass True, if the final price depends on the shipping method
+	// Optional. Pass True if the final price depends on the shipping method
 	IsFlexible bool `json:"is_flexible,omitempty"`
 }
 
 // InputInvoiceMessageContent.inputMessageContent is a dummy method to avoid interface implementation.
 func (v InputInvoiceMessageContent) inputMessageContent() {}
 
-// InputLocationMessageContent Represents the content of a location message to be sent as the result of an inline query.
-// https://core.telegram.org/bots/api#inputlocationmessagecontent
+// InputLocationMessageContent (https://core.telegram.org/bots/api#inputlocationmessagecontent)
+//
+// Represents the content of a location message to be sent as the result of an inline query.
 type InputLocationMessageContent struct {
 	// Latitude of the location in degrees
 	Latitude float64 `json:"latitude"`
@@ -2859,19 +3106,21 @@ type InputLocationMessageContent struct {
 // InputLocationMessageContent.inputMessageContent is a dummy method to avoid interface implementation.
 func (v InputLocationMessageContent) inputMessageContent() {}
 
-// InputMedia This object represents the content of a media message to be sent. It should be one of
-// - InputMediaAnimation
-// - InputMediaDocument
-// - InputMediaAudio
-// - InputMediaPhoto
-// - InputMediaVideo
-// https://core.telegram.org/bots/api#inputmedia
+// InputMedia (https://core.telegram.org/bots/api#inputmedia)
+//
+// This object represents the content of a media message to be sent. It should be one of
+//   - InputMediaAnimation
+//   - InputMediaDocument
+//   - InputMediaAudio
+//   - InputMediaPhoto
+//   - InputMediaVideo
 type InputMedia interface {
 	GetType() string
 	GetMedia() InputFile
+	// inputMedia exists to avoid external types implementing this interface.
 	inputMedia()
-	// InputMediaParams allows for uploading InputMedia files with attachments.
-	InputMediaParams(string, map[string]NamedReader) ([]byte, error)
+	// InputParams allows for uploading attachments with files.
+	InputParams(string, map[string]NamedReader) ([]byte, error)
 	// MergeInputMedia returns a MergedInputMedia struct to simplify working with complex telegram types in a non-generic world.
 	MergeInputMedia() MergedInputMedia
 }
@@ -2880,10 +3129,10 @@ type InputMedia interface {
 type MergedInputMedia struct {
 	// Type of the result, must be animation
 	Type string `json:"type"`
-	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 	Media InputFile `json:"media"`
-	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files (Only for animation, document, audio, video)
-	Thumb *InputFile `json:"thumb,omitempty"`
+	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files (Only for animation, document, audio, video)
+	Thumbnail *InputFile `json:"thumbnail,omitempty"`
 	// Optional. Caption of the animation to be sent, 0-1024 characters after entities parsing
 	Caption string `json:"caption,omitempty"`
 	// Optional. Mode for parsing entities in the animation caption. See formatting options for more details.
@@ -2896,13 +3145,15 @@ type MergedInputMedia struct {
 	Height int64 `json:"height,omitempty"`
 	// Optional. Animation duration in seconds (Only for animation, audio, video)
 	Duration int64 `json:"duration,omitempty"`
+	// Optional. Pass True if the animation needs to be covered with a spoiler animation (Only for animation, photo, video)
+	HasSpoiler bool `json:"has_spoiler,omitempty"`
 	// Optional. Disables automatic server-side content type detection for files uploaded using multipart/form-data. Always True, if the document is sent as part of an album. (Only for document)
 	DisableContentTypeDetection bool `json:"disable_content_type_detection,omitempty"`
 	// Optional. Performer of the audio (Only for audio)
 	Performer string `json:"performer,omitempty"`
 	// Optional. Title of the audio (Only for audio)
 	Title string `json:"title,omitempty"`
-	// Optional. Pass True, if the uploaded video is suitable for streaming (Only for video)
+	// Optional. Pass True if the uploaded video is suitable for streaming (Only for video)
 	SupportsStreaming bool `json:"supports_streaming,omitempty"`
 }
 
@@ -2924,13 +3175,14 @@ func (v MergedInputMedia) MergeInputMedia() MergedInputMedia {
 	return v
 }
 
-// InputMediaAnimation Represents an animation file (GIF or H.264/MPEG-4 AVC video without sound) to be sent.
-// https://core.telegram.org/bots/api#inputmediaanimation
+// InputMediaAnimation (https://core.telegram.org/bots/api#inputmediaanimation)
+//
+// Represents an animation file (GIF or H.264/MPEG-4 AVC video without sound) to be sent.
 type InputMediaAnimation struct {
-	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
+	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
 	Media InputFile `json:"media"`
-	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
-	Thumb *InputFile `json:"thumb,omitempty"`
+	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	Thumbnail *InputFile `json:"thumbnail,omitempty"`
 	// Optional. Caption of the animation to be sent, 0-1024 characters after entities parsing
 	Caption string `json:"caption,omitempty"`
 	// Optional. Mode for parsing entities in the animation caption. See formatting options for more details.
@@ -2943,28 +3195,8 @@ type InputMediaAnimation struct {
 	Height int64 `json:"height,omitempty"`
 	// Optional. Animation duration in seconds
 	Duration int64 `json:"duration,omitempty"`
-}
-
-func (v InputMediaAnimation) InputMediaParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
-	if v.Media != nil {
-		switch m := v.Media.(type) {
-		case string:
-			// ok, noop
-
-		case NamedReader:
-			v.Media = "attach://" + mediaName
-			data[mediaName] = m
-
-		case io.Reader:
-			v.Media = "attach://" + mediaName
-			data[mediaName] = NamedFile{File: m}
-
-		default:
-			return nil, fmt.Errorf("unknown type for InputMedia: %T", v.Media)
-		}
-	}
-
-	return json.Marshal(v)
+	// Optional. Pass True if the animation needs to be covered with a spoiler animation
+	HasSpoiler bool `json:"has_spoiler,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -2982,13 +3214,14 @@ func (v InputMediaAnimation) MergeInputMedia() MergedInputMedia {
 	return MergedInputMedia{
 		Type:            "animation",
 		Media:           v.Media,
-		Thumb:           v.Thumb,
+		Thumbnail:       v.Thumbnail,
 		Caption:         v.Caption,
 		ParseMode:       v.ParseMode,
 		CaptionEntities: v.CaptionEntities,
 		Width:           v.Width,
 		Height:          v.Height,
 		Duration:        v.Duration,
+		HasSpoiler:      v.HasSpoiler,
 	}
 }
 
@@ -3008,28 +3241,7 @@ func (v InputMediaAnimation) MarshalJSON() ([]byte, error) {
 // InputMediaAnimation.inputMedia is a dummy method to avoid interface implementation.
 func (v InputMediaAnimation) inputMedia() {}
 
-// InputMediaAudio Represents an audio file to be treated as music to be sent.
-// https://core.telegram.org/bots/api#inputmediaaudio
-type InputMediaAudio struct {
-	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
-	Media InputFile `json:"media"`
-	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
-	Thumb *InputFile `json:"thumb,omitempty"`
-	// Optional. Caption of the audio to be sent, 0-1024 characters after entities parsing
-	Caption string `json:"caption,omitempty"`
-	// Optional. Mode for parsing entities in the audio caption. See formatting options for more details.
-	ParseMode string `json:"parse_mode,omitempty"`
-	// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
-	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
-	// Optional. Duration of the audio in seconds
-	Duration int64 `json:"duration,omitempty"`
-	// Optional. Performer of the audio
-	Performer string `json:"performer,omitempty"`
-	// Optional. Title of the audio
-	Title string `json:"title,omitempty"`
-}
-
-func (v InputMediaAudio) InputMediaParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
+func (v InputMediaAnimation) InputParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
 	if v.Media != nil {
 		switch m := v.Media.(type) {
 		case string:
@@ -3044,11 +3256,33 @@ func (v InputMediaAudio) InputMediaParams(mediaName string, data map[string]Name
 			data[mediaName] = NamedFile{File: m}
 
 		default:
-			return nil, fmt.Errorf("unknown type for InputMedia: %T", v.Media)
+			return nil, fmt.Errorf("unknown type: %T", v.Media)
 		}
 	}
 
 	return json.Marshal(v)
+}
+
+// InputMediaAudio (https://core.telegram.org/bots/api#inputmediaaudio)
+//
+// Represents an audio file to be treated as music to be sent.
+type InputMediaAudio struct {
+	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	Media InputFile `json:"media"`
+	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	Thumbnail *InputFile `json:"thumbnail,omitempty"`
+	// Optional. Caption of the audio to be sent, 0-1024 characters after entities parsing
+	Caption string `json:"caption,omitempty"`
+	// Optional. Mode for parsing entities in the audio caption. See formatting options for more details.
+	ParseMode string `json:"parse_mode,omitempty"`
+	// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
+	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
+	// Optional. Duration of the audio in seconds
+	Duration int64 `json:"duration,omitempty"`
+	// Optional. Performer of the audio
+	Performer string `json:"performer,omitempty"`
+	// Optional. Title of the audio
+	Title string `json:"title,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -3066,7 +3300,7 @@ func (v InputMediaAudio) MergeInputMedia() MergedInputMedia {
 	return MergedInputMedia{
 		Type:            "audio",
 		Media:           v.Media,
-		Thumb:           v.Thumb,
+		Thumbnail:       v.Thumbnail,
 		Caption:         v.Caption,
 		ParseMode:       v.ParseMode,
 		CaptionEntities: v.CaptionEntities,
@@ -3092,24 +3326,7 @@ func (v InputMediaAudio) MarshalJSON() ([]byte, error) {
 // InputMediaAudio.inputMedia is a dummy method to avoid interface implementation.
 func (v InputMediaAudio) inputMedia() {}
 
-// InputMediaDocument Represents a general file to be sent.
-// https://core.telegram.org/bots/api#inputmediadocument
-type InputMediaDocument struct {
-	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
-	Media InputFile `json:"media"`
-	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
-	Thumb *InputFile `json:"thumb,omitempty"`
-	// Optional. Caption of the document to be sent, 0-1024 characters after entities parsing
-	Caption string `json:"caption,omitempty"`
-	// Optional. Mode for parsing entities in the document caption. See formatting options for more details.
-	ParseMode string `json:"parse_mode,omitempty"`
-	// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
-	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
-	// Optional. Disables automatic server-side content type detection for files uploaded using multipart/form-data. Always True, if the document is sent as part of an album.
-	DisableContentTypeDetection bool `json:"disable_content_type_detection,omitempty"`
-}
-
-func (v InputMediaDocument) InputMediaParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
+func (v InputMediaAudio) InputParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
 	if v.Media != nil {
 		switch m := v.Media.(type) {
 		case string:
@@ -3124,11 +3341,29 @@ func (v InputMediaDocument) InputMediaParams(mediaName string, data map[string]N
 			data[mediaName] = NamedFile{File: m}
 
 		default:
-			return nil, fmt.Errorf("unknown type for InputMedia: %T", v.Media)
+			return nil, fmt.Errorf("unknown type: %T", v.Media)
 		}
 	}
 
 	return json.Marshal(v)
+}
+
+// InputMediaDocument (https://core.telegram.org/bots/api#inputmediadocument)
+//
+// Represents a general file to be sent.
+type InputMediaDocument struct {
+	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	Media InputFile `json:"media"`
+	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	Thumbnail *InputFile `json:"thumbnail,omitempty"`
+	// Optional. Caption of the document to be sent, 0-1024 characters after entities parsing
+	Caption string `json:"caption,omitempty"`
+	// Optional. Mode for parsing entities in the document caption. See formatting options for more details.
+	ParseMode string `json:"parse_mode,omitempty"`
+	// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
+	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
+	// Optional. Disables automatic server-side content type detection for files uploaded using multipart/form-data. Always True, if the document is sent as part of an album.
+	DisableContentTypeDetection bool `json:"disable_content_type_detection,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -3146,7 +3381,7 @@ func (v InputMediaDocument) MergeInputMedia() MergedInputMedia {
 	return MergedInputMedia{
 		Type:                        "document",
 		Media:                       v.Media,
-		Thumb:                       v.Thumb,
+		Thumbnail:                   v.Thumbnail,
 		Caption:                     v.Caption,
 		ParseMode:                   v.ParseMode,
 		CaptionEntities:             v.CaptionEntities,
@@ -3170,20 +3405,7 @@ func (v InputMediaDocument) MarshalJSON() ([]byte, error) {
 // InputMediaDocument.inputMedia is a dummy method to avoid interface implementation.
 func (v InputMediaDocument) inputMedia() {}
 
-// InputMediaPhoto Represents a photo to be sent.
-// https://core.telegram.org/bots/api#inputmediaphoto
-type InputMediaPhoto struct {
-	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
-	Media InputFile `json:"media"`
-	// Optional. Caption of the photo to be sent, 0-1024 characters after entities parsing
-	Caption string `json:"caption,omitempty"`
-	// Optional. Mode for parsing entities in the photo caption. See formatting options for more details.
-	ParseMode string `json:"parse_mode,omitempty"`
-	// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
-	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
-}
-
-func (v InputMediaPhoto) InputMediaParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
+func (v InputMediaDocument) InputParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
 	if v.Media != nil {
 		switch m := v.Media.(type) {
 		case string:
@@ -3198,11 +3420,27 @@ func (v InputMediaPhoto) InputMediaParams(mediaName string, data map[string]Name
 			data[mediaName] = NamedFile{File: m}
 
 		default:
-			return nil, fmt.Errorf("unknown type for InputMedia: %T", v.Media)
+			return nil, fmt.Errorf("unknown type: %T", v.Media)
 		}
 	}
 
 	return json.Marshal(v)
+}
+
+// InputMediaPhoto (https://core.telegram.org/bots/api#inputmediaphoto)
+//
+// Represents a photo to be sent.
+type InputMediaPhoto struct {
+	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	Media InputFile `json:"media"`
+	// Optional. Caption of the photo to be sent, 0-1024 characters after entities parsing
+	Caption string `json:"caption,omitempty"`
+	// Optional. Mode for parsing entities in the photo caption. See formatting options for more details.
+	ParseMode string `json:"parse_mode,omitempty"`
+	// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
+	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
+	// Optional. Pass True if the photo needs to be covered with a spoiler animation
+	HasSpoiler bool `json:"has_spoiler,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -3223,6 +3461,7 @@ func (v InputMediaPhoto) MergeInputMedia() MergedInputMedia {
 		Caption:         v.Caption,
 		ParseMode:       v.ParseMode,
 		CaptionEntities: v.CaptionEntities,
+		HasSpoiler:      v.HasSpoiler,
 	}
 }
 
@@ -3242,30 +3481,7 @@ func (v InputMediaPhoto) MarshalJSON() ([]byte, error) {
 // InputMediaPhoto.inputMedia is a dummy method to avoid interface implementation.
 func (v InputMediaPhoto) inputMedia() {}
 
-// InputMediaVideo Represents a video to be sent.
-// https://core.telegram.org/bots/api#inputmediavideo
-type InputMediaVideo struct {
-	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
-	Media InputFile `json:"media"`
-	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More info on Sending Files: https://core.telegram.org/bots/api#sending-files
-	Thumb *InputFile `json:"thumb,omitempty"`
-	// Optional. Caption of the video to be sent, 0-1024 characters after entities parsing
-	Caption string `json:"caption,omitempty"`
-	// Optional. Mode for parsing entities in the video caption. See formatting options for more details.
-	ParseMode string `json:"parse_mode,omitempty"`
-	// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
-	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
-	// Optional. Video width
-	Width int64 `json:"width,omitempty"`
-	// Optional. Video height
-	Height int64 `json:"height,omitempty"`
-	// Optional. Video duration in seconds
-	Duration int64 `json:"duration,omitempty"`
-	// Optional. Pass True, if the uploaded video is suitable for streaming
-	SupportsStreaming bool `json:"supports_streaming,omitempty"`
-}
-
-func (v InputMediaVideo) InputMediaParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
+func (v InputMediaPhoto) InputParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
 	if v.Media != nil {
 		switch m := v.Media.(type) {
 		case string:
@@ -3280,11 +3496,37 @@ func (v InputMediaVideo) InputMediaParams(mediaName string, data map[string]Name
 			data[mediaName] = NamedFile{File: m}
 
 		default:
-			return nil, fmt.Errorf("unknown type for InputMedia: %T", v.Media)
+			return nil, fmt.Errorf("unknown type: %T", v.Media)
 		}
 	}
 
 	return json.Marshal(v)
+}
+
+// InputMediaVideo (https://core.telegram.org/bots/api#inputmediavideo)
+//
+// Represents a video to be sent.
+type InputMediaVideo struct {
+	// File to send. Pass a file_id to send a file that exists on the Telegram servers (recommended), pass an HTTP URL for Telegram to get a file from the Internet, or pass "attach://<file_attach_name>" to upload a new one using multipart/form-data under <file_attach_name> name. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	Media InputFile `json:"media"`
+	// Optional. Thumbnail of the file sent; can be ignored if thumbnail generation for the file is supported server-side. The thumbnail should be in JPEG format and less than 200 kB in size. A thumbnail's width and height should not exceed 320. Ignored if the file is not uploaded using multipart/form-data. Thumbnails can't be reused and can be only uploaded as a new file, so you can pass "attach://<file_attach_name>" if the thumbnail was uploaded using multipart/form-data under <file_attach_name>. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	Thumbnail *InputFile `json:"thumbnail,omitempty"`
+	// Optional. Caption of the video to be sent, 0-1024 characters after entities parsing
+	Caption string `json:"caption,omitempty"`
+	// Optional. Mode for parsing entities in the video caption. See formatting options for more details.
+	ParseMode string `json:"parse_mode,omitempty"`
+	// Optional. List of special entities that appear in the caption, which can be specified instead of parse_mode
+	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
+	// Optional. Video width
+	Width int64 `json:"width,omitempty"`
+	// Optional. Video height
+	Height int64 `json:"height,omitempty"`
+	// Optional. Video duration in seconds
+	Duration int64 `json:"duration,omitempty"`
+	// Optional. Pass True if the uploaded video is suitable for streaming
+	SupportsStreaming bool `json:"supports_streaming,omitempty"`
+	// Optional. Pass True if the video needs to be covered with a spoiler animation
+	HasSpoiler bool `json:"has_spoiler,omitempty"`
 }
 
 // GetType is a helper method to easily access the common fields of an interface.
@@ -3302,7 +3544,7 @@ func (v InputMediaVideo) MergeInputMedia() MergedInputMedia {
 	return MergedInputMedia{
 		Type:              "video",
 		Media:             v.Media,
-		Thumb:             v.Thumb,
+		Thumbnail:         v.Thumbnail,
 		Caption:           v.Caption,
 		ParseMode:         v.ParseMode,
 		CaptionEntities:   v.CaptionEntities,
@@ -3310,6 +3552,7 @@ func (v InputMediaVideo) MergeInputMedia() MergedInputMedia {
 		Height:            v.Height,
 		Duration:          v.Duration,
 		SupportsStreaming: v.SupportsStreaming,
+		HasSpoiler:        v.HasSpoiler,
 	}
 }
 
@@ -3329,19 +3572,80 @@ func (v InputMediaVideo) MarshalJSON() ([]byte, error) {
 // InputMediaVideo.inputMedia is a dummy method to avoid interface implementation.
 func (v InputMediaVideo) inputMedia() {}
 
-// InputMessageContent This object represents the content of a message to be sent as a result of an inline query. Telegram clients currently support the following 5 types:
-// - InputTextMessageContent
-// - InputLocationMessageContent
-// - InputVenueMessageContent
-// - InputContactMessageContent
-// - InputInvoiceMessageContent
-// https://core.telegram.org/bots/api#inputmessagecontent
+func (v InputMediaVideo) InputParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
+	if v.Media != nil {
+		switch m := v.Media.(type) {
+		case string:
+			// ok, noop
+
+		case NamedReader:
+			v.Media = "attach://" + mediaName
+			data[mediaName] = m
+
+		case io.Reader:
+			v.Media = "attach://" + mediaName
+			data[mediaName] = NamedFile{File: m}
+
+		default:
+			return nil, fmt.Errorf("unknown type: %T", v.Media)
+		}
+	}
+
+	return json.Marshal(v)
+}
+
+// InputMessageContent (https://core.telegram.org/bots/api#inputmessagecontent)
+//
+// This object represents the content of a message to be sent as a result of an inline query. Telegram clients currently support the following 5 types:
+//   - InputTextMessageContent
+//   - InputLocationMessageContent
+//   - InputVenueMessageContent
+//   - InputContactMessageContent
+//   - InputInvoiceMessageContent
 type InputMessageContent interface {
+	// inputMessageContent exists to avoid external types implementing this interface.
 	inputMessageContent()
 }
 
-// InputTextMessageContent Represents the content of a text message to be sent as the result of an inline query.
-// https://core.telegram.org/bots/api#inputtextmessagecontent
+// InputSticker (https://core.telegram.org/bots/api#inputsticker)
+//
+// This object describes a sticker to be added to a sticker set.
+type InputSticker struct {
+	// The added sticker. Pass a file_id as a String to send a file that already exists on the Telegram servers, pass an HTTP URL as a String for Telegram to get a file from the Internet, or upload a new one using multipart/form-data. Animated and video stickers can't be uploaded via HTTP URL. More information on Sending Files: https://core.telegram.org/bots/api#sending-files
+	Sticker InputFile `json:"sticker"`
+	// List of 1-20 emoji associated with the sticker
+	EmojiList []string `json:"emoji_list,omitempty"`
+	// Optional. Position where the mask should be placed on faces. For "mask" stickers only.
+	MaskPosition *MaskPosition `json:"mask_position,omitempty"`
+	// Optional. List of 0-20 search keywords for the sticker with total length of up to 64 characters. For "regular" and "custom_emoji" stickers only.
+	Keywords []string `json:"keywords,omitempty"`
+}
+
+func (v InputSticker) InputParams(mediaName string, data map[string]NamedReader) ([]byte, error) {
+	if v.Sticker != nil {
+		switch m := v.Sticker.(type) {
+		case string:
+			// ok, noop
+
+		case NamedReader:
+			v.Sticker = "attach://" + mediaName
+			data[mediaName] = m
+
+		case io.Reader:
+			v.Sticker = "attach://" + mediaName
+			data[mediaName] = NamedFile{File: m}
+
+		default:
+			return nil, fmt.Errorf("unknown type: %T", v.Sticker)
+		}
+	}
+
+	return json.Marshal(v)
+}
+
+// InputTextMessageContent (https://core.telegram.org/bots/api#inputtextmessagecontent)
+//
+// Represents the content of a text message to be sent as the result of an inline query.
 type InputTextMessageContent struct {
 	// Text of the message to be sent, 1-4096 characters
 	MessageText string `json:"message_text"`
@@ -3356,8 +3660,9 @@ type InputTextMessageContent struct {
 // InputTextMessageContent.inputMessageContent is a dummy method to avoid interface implementation.
 func (v InputTextMessageContent) inputMessageContent() {}
 
-// InputVenueMessageContent Represents the content of a venue message to be sent as the result of an inline query.
-// https://core.telegram.org/bots/api#inputvenuemessagecontent
+// InputVenueMessageContent (https://core.telegram.org/bots/api#inputvenuemessagecontent)
+//
+// Represents the content of a venue message to be sent as the result of an inline query.
 type InputVenueMessageContent struct {
 	// Latitude of the venue in degrees
 	Latitude float64 `json:"latitude"`
@@ -3380,8 +3685,9 @@ type InputVenueMessageContent struct {
 // InputVenueMessageContent.inputMessageContent is a dummy method to avoid interface implementation.
 func (v InputVenueMessageContent) inputMessageContent() {}
 
-// Invoice This object contains basic information about an invoice.
-// https://core.telegram.org/bots/api#invoice
+// Invoice (https://core.telegram.org/bots/api#invoice)
+//
+// This object contains basic information about an invoice.
 type Invoice struct {
 	// Product name
 	Title string `json:"title"`
@@ -3395,29 +3701,75 @@ type Invoice struct {
 	TotalAmount int64 `json:"total_amount"`
 }
 
-// KeyboardButton This object represents one button of the reply keyboard. For simple text buttons String can be used instead of this object to specify text of the button. Optional fields request_contact, request_location, and request_poll are mutually exclusive.
-// Note: request_contact and request_location options will only work in Telegram versions released after 9 April, 2016. Older clients will display unsupported message.Note: request_poll option will only work in Telegram versions released after 23 January, 2020. Older clients will display unsupported message.
-// https://core.telegram.org/bots/api#keyboardbutton
+// KeyboardButton (https://core.telegram.org/bots/api#keyboardbutton)
+//
+// This object represents one button of the reply keyboard. For simple text buttons, String can be used instead of this object to specify the button text. The optional fields web_app, request_user, request_chat, request_contact, request_location, and request_poll are mutually exclusive.
+// Note: request_contact and request_location options will only work in Telegram versions released after 9 April, 2016. Older clients will display unsupported message.
+// Note: request_poll option will only work in Telegram versions released after 23 January, 2020. Older clients will display unsupported message.
+// Note: web_app option will only work in Telegram versions released after 16 April, 2022. Older clients will display unsupported message.
+// Note: request_user and request_chat options will only work in Telegram versions released after 3 February, 2023. Older clients will display unsupported message.
 type KeyboardButton struct {
 	// Text of the button. If none of the optional fields are used, it will be sent as a message when the button is pressed
 	Text string `json:"text"`
-	// Optional. If True, the user's phone number will be sent as a contact when the button is pressed. Available in private chats only
+	// Optional. If specified, pressing the button will open a list of suitable users. Tapping on any user will send their identifier to the bot in a "user_shared" service message. Available in private chats only.
+	RequestUser *KeyboardButtonRequestUser `json:"request_user,omitempty"`
+	// Optional. If specified, pressing the button will open a list of suitable chats. Tapping on a chat will send its identifier to the bot in a "chat_shared" service message. Available in private chats only.
+	RequestChat *KeyboardButtonRequestChat `json:"request_chat,omitempty"`
+	// Optional. If True, the user's phone number will be sent as a contact when the button is pressed. Available in private chats only.
 	RequestContact bool `json:"request_contact,omitempty"`
-	// Optional. If True, the user's current location will be sent when the button is pressed. Available in private chats only
+	// Optional. If True, the user's current location will be sent when the button is pressed. Available in private chats only.
 	RequestLocation bool `json:"request_location,omitempty"`
-	// Optional. If specified, the user will be asked to create a poll and send it to the bot when the button is pressed. Available in private chats only
+	// Optional. If specified, the user will be asked to create a poll and send it to the bot when the button is pressed. Available in private chats only.
 	RequestPoll *KeyboardButtonPollType `json:"request_poll,omitempty"`
+	// Optional. If specified, the described Web App will be launched when the button is pressed. The Web App will be able to send a "web_app_data" service message. Available in private chats only.
+	WebApp *WebAppInfo `json:"web_app,omitempty"`
 }
 
-// KeyboardButtonPollType This object represents type of a poll, which is allowed to be created and sent when the corresponding button is pressed.
-// https://core.telegram.org/bots/api#keyboardbuttonpolltype
+// KeyboardButtonPollType (https://core.telegram.org/bots/api#keyboardbuttonpolltype)
+//
+// This object represents type of a poll, which is allowed to be created and sent when the corresponding button is pressed.
 type KeyboardButtonPollType struct {
 	// Optional. If quiz is passed, the user will be allowed to create only polls in the quiz mode. If regular is passed, only regular polls will be allowed. Otherwise, the user will be allowed to create a poll of any type.
 	Type string `json:"type,omitempty"`
 }
 
-// LabeledPrice This object represents a portion of the price for goods or services.
-// https://core.telegram.org/bots/api#labeledprice
+// KeyboardButtonRequestChat (https://core.telegram.org/bots/api#keyboardbuttonrequestchat)
+//
+// This object defines the criteria used to request a suitable chat. The identifier of the selected chat will be shared with the bot when the corresponding button is pressed.
+type KeyboardButtonRequestChat struct {
+	// Signed 32-bit identifier of the request, which will be received back in the ChatShared object. Must be unique within the message
+	RequestId int64 `json:"request_id"`
+	// Pass True to request a channel chat, pass False to request a group or a supergroup chat.
+	ChatIsChannel bool `json:"chat_is_channel"`
+	// Optional. Pass True to request a forum supergroup, pass False to request a non-forum chat. If not specified, no additional restrictions are applied.
+	ChatIsForum *bool `json:"chat_is_forum,omitempty"`
+	// Optional. Pass True to request a supergroup or a channel with a username, pass False to request a chat without a username. If not specified, no additional restrictions are applied.
+	ChatHasUsername *bool `json:"chat_has_username,omitempty"`
+	// Optional. Pass True to request a chat owned by the user. Otherwise, no additional restrictions are applied.
+	ChatIsCreated bool `json:"chat_is_created,omitempty"`
+	// Optional. A JSON-serialized object listing the required administrator rights of the user in the chat. The rights must be a superset of bot_administrator_rights. If not specified, no additional restrictions are applied.
+	UserAdministratorRights *ChatAdministratorRights `json:"user_administrator_rights,omitempty"`
+	// Optional. A JSON-serialized object listing the required administrator rights of the bot in the chat. The rights must be a subset of user_administrator_rights. If not specified, no additional restrictions are applied.
+	BotAdministratorRights *ChatAdministratorRights `json:"bot_administrator_rights,omitempty"`
+	// Optional. Pass True to request a chat with the bot as a member. Otherwise, no additional restrictions are applied.
+	BotIsMember bool `json:"bot_is_member,omitempty"`
+}
+
+// KeyboardButtonRequestUser (https://core.telegram.org/bots/api#keyboardbuttonrequestuser)
+//
+// This object defines the criteria used to request a suitable user. The identifier of the selected user will be shared with the bot when the corresponding button is pressed.
+type KeyboardButtonRequestUser struct {
+	// Signed 32-bit identifier of the request, which will be received back in the UserShared object. Must be unique within the message
+	RequestId int64 `json:"request_id"`
+	// Optional. Pass True to request a bot, pass False to request a regular user. If not specified, no additional restrictions are applied.
+	UserIsBot *bool `json:"user_is_bot,omitempty"`
+	// Optional. Pass True to request a premium user, pass False to request a non-premium user. If not specified, no additional restrictions are applied.
+	UserIsPremium *bool `json:"user_is_premium,omitempty"`
+}
+
+// LabeledPrice (https://core.telegram.org/bots/api#labeledprice)
+//
+// This object represents a portion of the price for goods or services.
 type LabeledPrice struct {
 	// Portion label
 	Label string `json:"label"`
@@ -3425,8 +3777,9 @@ type LabeledPrice struct {
 	Amount int64 `json:"amount"`
 }
 
-// Location This object represents a point on the map.
-// https://core.telegram.org/bots/api#location
+// Location (https://core.telegram.org/bots/api#location)
+//
+// This object represents a point on the map.
 type Location struct {
 	// Longitude as defined by sender
 	Longitude float64 `json:"longitude"`
@@ -3438,26 +3791,28 @@ type Location struct {
 	LivePeriod int64 `json:"live_period,omitempty"`
 	// Optional. The direction in which user is moving, in degrees; 1-360. For active live locations only.
 	Heading int64 `json:"heading,omitempty"`
-	// Optional. Maximum distance for proximity alerts about approaching another chat member, in meters. For sent live locations only.
+	// Optional. The maximum distance for proximity alerts about approaching another chat member, in meters. For sent live locations only.
 	ProximityAlertRadius int64 `json:"proximity_alert_radius,omitempty"`
 }
 
-// LoginUrl This object represents a parameter of the inline keyboard button used to automatically authorize a user. Serves as a great replacement for the Telegram Login Widget when the user is coming from Telegram. All the user needs to do is tap/click a button and confirm that they want to log in:
+// LoginUrl (https://core.telegram.org/bots/api#loginurl)
+//
+// This object represents a parameter of the inline keyboard button used to automatically authorize a user. Serves as a great replacement for the Telegram Login Widget when the user is coming from Telegram. All the user needs to do is tap/click a button and confirm that they want to log in:
 // Telegram apps support these buttons as of version 5.7.
-// https://core.telegram.org/bots/api#loginurl
 type LoginUrl struct {
-	// An HTTP URL to be opened with user authorization data added to the query string when the button is pressed. If the user refuses to provide authorization data, the original URL without information about the user will be opened. The data added is the same as described in Receiving authorization data. NOTE: You must always check the hash of the received data to verify the authentication and the integrity of the data as described in Checking authorization.
+	// An HTTPS URL to be opened with user authorization data added to the query string when the button is pressed. If the user refuses to provide authorization data, the original URL without information about the user will be opened. The data added is the same as described in Receiving authorization data. NOTE: You must always check the hash of the received data to verify the authentication and the integrity of the data as described in Checking authorization.
 	Url string `json:"url"`
 	// Optional. New text of the button in forwarded messages.
 	ForwardText string `json:"forward_text,omitempty"`
 	// Optional. Username of a bot, which will be used for user authorization. See Setting up a bot for more details. If not specified, the current bot's username will be assumed. The url's domain must be the same as the domain linked with the bot. See Linking your domain to the bot for more details.
-	BotUsername string `json:"bot_username,omitempty"`
+	BotUsername *string `json:"bot_username,omitempty"`
 	// Optional. Pass True to request the permission for your bot to send messages to the user.
 	RequestWriteAccess bool `json:"request_write_access,omitempty"`
 }
 
-// MaskPosition This object describes the position on faces where a mask should be placed by default.
-// https://core.telegram.org/bots/api#maskposition
+// MaskPosition (https://core.telegram.org/bots/api#maskposition)
+//
+// This object describes the position on faces where a mask should be placed by default.
 type MaskPosition struct {
 	// The part of the face relative to which the mask should be placed. One of "forehead", "eyes", "mouth", or "chin".
 	Point string `json:"point"`
@@ -3469,14 +3824,227 @@ type MaskPosition struct {
 	Scale float64 `json:"scale"`
 }
 
-// Message This object represents a message.
-// https://core.telegram.org/bots/api#message
+// MenuButton (https://core.telegram.org/bots/api#menubutton)
+//
+// This object describes the bot's menu button in a private chat. It should be one of
+//   - MenuButtonCommands
+//   - MenuButtonWebApp
+//   - MenuButtonDefault
+//
+// If a menu button other than MenuButtonDefault is set for a private chat, then it is applied in the chat. Otherwise the default menu button is applied. By default, the menu button opens the list of bot commands.
+type MenuButton interface {
+	GetType() string
+	// menuButton exists to avoid external types implementing this interface.
+	menuButton()
+	// MergeMenuButton returns a MergedMenuButton struct to simplify working with complex telegram types in a non-generic world.
+	MergeMenuButton() MergedMenuButton
+}
+
+// MergedMenuButton is a helper type to simplify interactions with the various MenuButton subtypes.
+type MergedMenuButton struct {
+	// Type of the button, must be commands
+	Type string `json:"type"`
+	// Optional. Text on the button (Only for web_app)
+	Text string `json:"text,omitempty"`
+	// Optional. Description of the Web App that will be launched when the user presses the button. The Web App will be able to send an arbitrary message on behalf of the user using the method answerWebAppQuery. (Only for web_app)
+	WebApp *WebAppInfo `json:"web_app,omitempty"`
+}
+
+// GetType is a helper method to easily access the common fields of an interface.
+func (v MergedMenuButton) GetType() string {
+	return v.Type
+}
+
+// MergedMenuButton.menuButton is a dummy method to avoid interface implementation.
+func (v MergedMenuButton) menuButton() {}
+
+// MergeMenuButton returns a MergedMenuButton struct to simplify working with types in a non-generic world.
+func (v MergedMenuButton) MergeMenuButton() MergedMenuButton {
+	return v
+}
+
+// unmarshalMenuButtonArray is a JSON unmarshalling helper which allows unmarshalling an array of interfaces
+// using unmarshalMenuButton.
+func unmarshalMenuButtonArray(d json.RawMessage) ([]MenuButton, error) {
+	var ds []json.RawMessage
+	err := json.Unmarshal(d, &ds)
+	if err != nil {
+		return nil, err
+	}
+
+	var vs []MenuButton
+	for _, d := range ds {
+		v, err := unmarshalMenuButton(d)
+		if err != nil {
+			return nil, err
+		}
+		vs = append(vs, v)
+	}
+
+	return vs, nil
+}
+
+// unmarshalMenuButton is a JSON unmarshal helper to marshal the right structs into a MenuButton interface
+// based on the Type field.
+func unmarshalMenuButton(d json.RawMessage) (MenuButton, error) {
+	if len(d) == 0 {
+		return nil, nil
+	}
+
+	t := struct {
+		Type string
+	}{}
+	err := json.Unmarshal(d, &t)
+	if err != nil {
+		return nil, err
+	}
+
+	switch t.Type {
+	case "commands":
+		s := MenuButtonCommands{}
+		err := json.Unmarshal(d, &s)
+		if err != nil {
+			return nil, err
+		}
+		return s, nil
+
+	case "web_app":
+		s := MenuButtonWebApp{}
+		err := json.Unmarshal(d, &s)
+		if err != nil {
+			return nil, err
+		}
+		return s, nil
+
+	case "default":
+		s := MenuButtonDefault{}
+		err := json.Unmarshal(d, &s)
+		if err != nil {
+			return nil, err
+		}
+		return s, nil
+
+	}
+	return nil, fmt.Errorf("unknown interface with Type %v", t.Type)
+}
+
+// MenuButtonCommands (https://core.telegram.org/bots/api#menubuttoncommands)
+//
+// Represents a menu button, which opens the bot's list of commands.
+type MenuButtonCommands struct{}
+
+// GetType is a helper method to easily access the common fields of an interface.
+func (v MenuButtonCommands) GetType() string {
+	return "commands"
+}
+
+// MergeMenuButton returns a MergedMenuButton struct to simplify working with types in a non-generic world.
+func (v MenuButtonCommands) MergeMenuButton() MergedMenuButton {
+	return MergedMenuButton{
+		Type: "commands",
+	}
+}
+
+// MarshalJSON is a custom JSON marshaller to allow for enforcing the Type value.
+func (v MenuButtonCommands) MarshalJSON() ([]byte, error) {
+	type alias MenuButtonCommands
+	a := struct {
+		Type string `json:"type"`
+		alias
+	}{
+		Type:  "commands",
+		alias: (alias)(v),
+	}
+	return json.Marshal(a)
+}
+
+// MenuButtonCommands.menuButton is a dummy method to avoid interface implementation.
+func (v MenuButtonCommands) menuButton() {}
+
+// MenuButtonDefault (https://core.telegram.org/bots/api#menubuttondefault)
+//
+// Describes that no specific value for the menu button was set.
+type MenuButtonDefault struct{}
+
+// GetType is a helper method to easily access the common fields of an interface.
+func (v MenuButtonDefault) GetType() string {
+	return "default"
+}
+
+// MergeMenuButton returns a MergedMenuButton struct to simplify working with types in a non-generic world.
+func (v MenuButtonDefault) MergeMenuButton() MergedMenuButton {
+	return MergedMenuButton{
+		Type: "default",
+	}
+}
+
+// MarshalJSON is a custom JSON marshaller to allow for enforcing the Type value.
+func (v MenuButtonDefault) MarshalJSON() ([]byte, error) {
+	type alias MenuButtonDefault
+	a := struct {
+		Type string `json:"type"`
+		alias
+	}{
+		Type:  "default",
+		alias: (alias)(v),
+	}
+	return json.Marshal(a)
+}
+
+// MenuButtonDefault.menuButton is a dummy method to avoid interface implementation.
+func (v MenuButtonDefault) menuButton() {}
+
+// MenuButtonWebApp (https://core.telegram.org/bots/api#menubuttonwebapp)
+//
+// Represents a menu button, which launches a Web App.
+type MenuButtonWebApp struct {
+	// Text on the button
+	Text string `json:"text"`
+	// Description of the Web App that will be launched when the user presses the button. The Web App will be able to send an arbitrary message on behalf of the user using the method answerWebAppQuery.
+	WebApp WebAppInfo `json:"web_app"`
+}
+
+// GetType is a helper method to easily access the common fields of an interface.
+func (v MenuButtonWebApp) GetType() string {
+	return "web_app"
+}
+
+// MergeMenuButton returns a MergedMenuButton struct to simplify working with types in a non-generic world.
+func (v MenuButtonWebApp) MergeMenuButton() MergedMenuButton {
+	return MergedMenuButton{
+		Type:   "web_app",
+		Text:   v.Text,
+		WebApp: &v.WebApp,
+	}
+}
+
+// MarshalJSON is a custom JSON marshaller to allow for enforcing the Type value.
+func (v MenuButtonWebApp) MarshalJSON() ([]byte, error) {
+	type alias MenuButtonWebApp
+	a := struct {
+		Type string `json:"type"`
+		alias
+	}{
+		Type:  "web_app",
+		alias: (alias)(v),
+	}
+	return json.Marshal(a)
+}
+
+// MenuButtonWebApp.menuButton is a dummy method to avoid interface implementation.
+func (v MenuButtonWebApp) menuButton() {}
+
+// Message (https://core.telegram.org/bots/api#message)
+//
+// This object represents a message.
 type Message struct {
 	// Unique message identifier inside this chat
 	MessageId int64 `json:"message_id"`
+	// Optional. Unique identifier of a message thread to which the message belongs; for supergroups only
+	MessageThreadId int64 `json:"message_thread_id,omitempty"`
 	// Optional. Sender of the message; empty for messages sent to channels. For backward compatibility, the field contains a fake sender user in non-channel chats, if the message was sent on behalf of a chat.
 	From *User `json:"from,omitempty"`
-	// Optional. Sender of the message, sent on behalf of a chat. For example, the channel itself for channel posts, the supergroup itself for messages from anonymous group administrators, the linked channel for messages automatically forwarded to the discussion group.  For backward compatibility, the field from contains a fake sender user in non-channel chats, if the message was sent on behalf of a chat.
+	// Optional. Sender of the message, sent on behalf of a chat. For example, the channel itself for channel posts, the supergroup itself for messages from anonymous group administrators, the linked channel for messages automatically forwarded to the discussion group. For backward compatibility, the field from contains a fake sender user in non-channel chats, if the message was sent on behalf of a chat.
 	SenderChat *Chat `json:"sender_chat,omitempty"`
 	// Date the message was sent in Unix time
 	Date int64 `json:"date"`
@@ -3494,6 +4062,8 @@ type Message struct {
 	ForwardSenderName string `json:"forward_sender_name,omitempty"`
 	// Optional. For forwarded messages, date the original message was sent in Unix time
 	ForwardDate int64 `json:"forward_date,omitempty"`
+	// Optional. True, if the message is sent to a forum topic
+	IsTopicMessage bool `json:"is_topic_message,omitempty"`
 	// Optional. True, if the message is a channel post that was automatically forwarded to the connected discussion group
 	IsAutomaticForward bool `json:"is_automatic_forward,omitempty"`
 	// Optional. For replies, the original message. Note that the Message object in this field will not contain further reply_to_message fields even if it itself is a reply.
@@ -3508,7 +4078,7 @@ type Message struct {
 	MediaGroupId string `json:"media_group_id,omitempty"`
 	// Optional. Signature of the post author for messages in channels, or the custom title of an anonymous group administrator
 	AuthorSignature string `json:"author_signature,omitempty"`
-	// Optional. For text messages, the actual UTF-8 text of the message, 0-4096 characters
+	// Optional. For text messages, the actual UTF-8 text of the message
 	Text string `json:"text,omitempty"`
 	// Optional. For text messages, special entities like usernames, URLs, bot commands, etc. that appear in the text
 	Entities []MessageEntity `json:"entities,omitempty"`
@@ -3528,10 +4098,12 @@ type Message struct {
 	VideoNote *VideoNote `json:"video_note,omitempty"`
 	// Optional. Message is a voice message, information about the file
 	Voice *Voice `json:"voice,omitempty"`
-	// Optional. Caption for the animation, audio, document, photo, video or voice, 0-1024 characters
+	// Optional. Caption for the animation, audio, document, photo, video or voice
 	Caption string `json:"caption,omitempty"`
 	// Optional. For messages with a caption, special entities like usernames, URLs, bot commands, etc. that appear in the caption
 	CaptionEntities []MessageEntity `json:"caption_entities,omitempty"`
+	// Optional. True, if the message media is covered by a spoiler animation
+	HasMediaSpoiler bool `json:"has_media_spoiler,omitempty"`
 	// Optional. Message is a shared contact, information about the contact
 	Contact *Contact `json:"contact,omitempty"`
 	// Optional. Message is a dice with random value
@@ -3572,57 +4144,83 @@ type Message struct {
 	Invoice *Invoice `json:"invoice,omitempty"`
 	// Optional. Message is a service message about a successful payment, information about the payment. More about payments: https://core.telegram.org/bots/api#payments
 	SuccessfulPayment *SuccessfulPayment `json:"successful_payment,omitempty"`
+	// Optional. Service message: a user was shared with the bot
+	UserShared *UserShared `json:"user_shared,omitempty"`
+	// Optional. Service message: a chat was shared with the bot
+	ChatShared *ChatShared `json:"chat_shared,omitempty"`
 	// Optional. The domain name of the website on which the user has logged in. More about Telegram Login: https://core.telegram.org/widgets/login
 	ConnectedWebsite string `json:"connected_website,omitempty"`
+	// Optional. Service message: the user allowed the bot added to the attachment menu to write messages
+	WriteAccessAllowed *WriteAccessAllowed `json:"write_access_allowed,omitempty"`
 	// Optional. Telegram Passport data
 	PassportData *PassportData `json:"passport_data,omitempty"`
 	// Optional. Service message. A user in the chat triggered another user's proximity alert while sharing Live Location.
 	ProximityAlertTriggered *ProximityAlertTriggered `json:"proximity_alert_triggered,omitempty"`
-	// Optional. Service message: voice chat scheduled
-	VoiceChatScheduled *VoiceChatScheduled `json:"voice_chat_scheduled,omitempty"`
-	// Optional. Service message: voice chat started
-	VoiceChatStarted *VoiceChatStarted `json:"voice_chat_started,omitempty"`
-	// Optional. Service message: voice chat ended
-	VoiceChatEnded *VoiceChatEnded `json:"voice_chat_ended,omitempty"`
-	// Optional. Service message: new participants invited to a voice chat
-	VoiceChatParticipantsInvited *VoiceChatParticipantsInvited `json:"voice_chat_participants_invited,omitempty"`
+	// Optional. Service message: forum topic created
+	ForumTopicCreated *ForumTopicCreated `json:"forum_topic_created,omitempty"`
+	// Optional. Service message: forum topic edited
+	ForumTopicEdited *ForumTopicEdited `json:"forum_topic_edited,omitempty"`
+	// Optional. Service message: forum topic closed
+	ForumTopicClosed *ForumTopicClosed `json:"forum_topic_closed,omitempty"`
+	// Optional. Service message: forum topic reopened
+	ForumTopicReopened *ForumTopicReopened `json:"forum_topic_reopened,omitempty"`
+	// Optional. Service message: the 'General' forum topic hidden
+	GeneralForumTopicHidden *GeneralForumTopicHidden `json:"general_forum_topic_hidden,omitempty"`
+	// Optional. Service message: the 'General' forum topic unhidden
+	GeneralForumTopicUnhidden *GeneralForumTopicUnhidden `json:"general_forum_topic_unhidden,omitempty"`
+	// Optional. Service message: video chat scheduled
+	VideoChatScheduled *VideoChatScheduled `json:"video_chat_scheduled,omitempty"`
+	// Optional. Service message: video chat started
+	VideoChatStarted *VideoChatStarted `json:"video_chat_started,omitempty"`
+	// Optional. Service message: video chat ended
+	VideoChatEnded *VideoChatEnded `json:"video_chat_ended,omitempty"`
+	// Optional. Service message: new participants invited to a video chat
+	VideoChatParticipantsInvited *VideoChatParticipantsInvited `json:"video_chat_participants_invited,omitempty"`
+	// Optional. Service message: data sent by a Web App
+	WebAppData *WebAppData `json:"web_app_data,omitempty"`
 	// Optional. Inline keyboard attached to the message. login_url buttons are represented as ordinary url buttons.
 	ReplyMarkup *InlineKeyboardMarkup `json:"reply_markup,omitempty"`
 }
 
-// MessageAutoDeleteTimerChanged This object represents a service message about a change in auto-delete timer settings.
-// https://core.telegram.org/bots/api#messageautodeletetimerchanged
+// MessageAutoDeleteTimerChanged (https://core.telegram.org/bots/api#messageautodeletetimerchanged)
+//
+// This object represents a service message about a change in auto-delete timer settings.
 type MessageAutoDeleteTimerChanged struct {
 	// New auto-delete time for messages in the chat; in seconds
 	MessageAutoDeleteTime int64 `json:"message_auto_delete_time"`
 }
 
-// MessageEntity This object represents one special entity in a text message. For example, hashtags, usernames, URLs, etc.
-// https://core.telegram.org/bots/api#messageentity
+// MessageEntity (https://core.telegram.org/bots/api#messageentity)
+//
+// This object represents one special entity in a text message. For example, hashtags, usernames, URLs, etc.
 type MessageEntity struct {
-	// Type of the entity. Currently, can be "mention" (@username), "hashtag" (#hashtag), "cashtag" ($USD), "bot_command" (/start@jobs_bot), "url" (https://telegram.org), "email" (do-not-reply@telegram.org), "phone_number" (+1-212-555-0123), "bold" (bold text), "italic" (italic text), "underline" (underlined text), "strikethrough" (strikethrough text), "spoiler" (spoiler message), "code" (monowidth string), "pre" (monowidth block), "text_link" (for clickable text URLs), "text_mention" (for users without usernames)
+	// Type of the entity. Currently, can be "mention" (@username), "hashtag" (#hashtag), "cashtag" ($USD), "bot_command" (/start@jobs_bot), "url" (https://telegram.org), "email" (do-not-reply@telegram.org), "phone_number" (+1-212-555-0123), "bold" (bold text), "italic" (italic text), "underline" (underlined text), "strikethrough" (strikethrough text), "spoiler" (spoiler message), "code" (monowidth string), "pre" (monowidth block), "text_link" (for clickable text URLs), "text_mention" (for users without usernames), "custom_emoji" (for inline custom emoji stickers)
 	Type string `json:"type"`
 	// Offset in UTF-16 code units to the start of the entity
 	Offset int64 `json:"offset"`
 	// Length of the entity in UTF-16 code units
 	Length int64 `json:"length"`
-	// Optional. For "text_link" only, url that will be opened after user taps on the text
+	// Optional. For "text_link" only, URL that will be opened after user taps on the text
 	Url string `json:"url,omitempty"`
 	// Optional. For "text_mention" only, the mentioned user
 	User *User `json:"user,omitempty"`
 	// Optional. For "pre" only, the programming language of the entity text
 	Language string `json:"language,omitempty"`
+	// Optional. For "custom_emoji" only, unique identifier of the custom emoji. Use getCustomEmojiStickers to get full information about the sticker
+	CustomEmojiId string `json:"custom_emoji_id,omitempty"`
 }
 
-// MessageId This object represents a unique message identifier.
-// https://core.telegram.org/bots/api#messageid
+// MessageId (https://core.telegram.org/bots/api#messageid)
+//
+// This object represents a unique message identifier.
 type MessageId struct {
 	// Unique message identifier
 	MessageId int64 `json:"message_id"`
 }
 
-// OrderInfo This object represents information about an order.
-// https://core.telegram.org/bots/api#orderinfo
+// OrderInfo (https://core.telegram.org/bots/api#orderinfo)
+//
+// This object represents information about an order.
 type OrderInfo struct {
 	// Optional. User name
 	Name string `json:"name,omitempty"`
@@ -3634,8 +4232,9 @@ type OrderInfo struct {
 	ShippingAddress *ShippingAddress `json:"shipping_address,omitempty"`
 }
 
-// PassportData Contains information about Telegram Passport data shared with the bot by the user.
-// https://core.telegram.org/bots/api#passportdata
+// PassportData (https://core.telegram.org/bots/api#passportdata)
+//
+// Describes Telegram Passport data shared with the bot by the user.
 type PassportData struct {
 	// Array with information about documents and other Telegram Passport elements that was shared with the bot
 	Data []EncryptedPassportElement `json:"data,omitempty"`
@@ -3643,21 +4242,23 @@ type PassportData struct {
 	Credentials EncryptedCredentials `json:"credentials"`
 }
 
-// PassportElementError This object represents an error in the Telegram Passport element which was submitted that should be resolved by the user. It should be one of:
-// - PassportElementErrorDataField
-// - PassportElementErrorFrontSide
-// - PassportElementErrorReverseSide
-// - PassportElementErrorSelfie
-// - PassportElementErrorFile
-// - PassportElementErrorFiles
-// - PassportElementErrorTranslationFile
-// - PassportElementErrorTranslationFiles
-// - PassportElementErrorUnspecified
-// https://core.telegram.org/bots/api#passportelementerror
+// PassportElementError (https://core.telegram.org/bots/api#passportelementerror)
+//
+// This object represents an error in the Telegram Passport element which was submitted that should be resolved by the user. It should be one of:
+//   - PassportElementErrorDataField
+//   - PassportElementErrorFrontSide
+//   - PassportElementErrorReverseSide
+//   - PassportElementErrorSelfie
+//   - PassportElementErrorFile
+//   - PassportElementErrorFiles
+//   - PassportElementErrorTranslationFile
+//   - PassportElementErrorTranslationFiles
+//   - PassportElementErrorUnspecified
 type PassportElementError interface {
 	GetSource() string
 	GetType() string
 	GetMessage() string
+	// passportElementError exists to avoid external types implementing this interface.
 	passportElementError()
 	// MergePassportElementError returns a MergedPassportElementError struct to simplify working with complex telegram types in a non-generic world.
 	MergePassportElementError() MergedPassportElementError
@@ -3706,8 +4307,9 @@ func (v MergedPassportElementError) MergePassportElementError() MergedPassportEl
 	return v
 }
 
-// PassportElementErrorDataField Represents an issue in one of the data fields that was provided by the user. The error is considered resolved when the field's value changes.
-// https://core.telegram.org/bots/api#passportelementerrordatafield
+// PassportElementErrorDataField (https://core.telegram.org/bots/api#passportelementerrordatafield)
+//
+// Represents an issue in one of the data fields that was provided by the user. The error is considered resolved when the field's value changes.
 type PassportElementErrorDataField struct {
 	// The section of the user's Telegram Passport which has the error, one of "personal_details", "passport", "driver_license", "identity_card", "internal_passport", "address"
 	Type string `json:"type"`
@@ -3761,8 +4363,9 @@ func (v PassportElementErrorDataField) MarshalJSON() ([]byte, error) {
 // PassportElementErrorDataField.passportElementError is a dummy method to avoid interface implementation.
 func (v PassportElementErrorDataField) passportElementError() {}
 
-// PassportElementErrorFile Represents an issue with a document scan. The error is considered resolved when the file with the document scan changes.
-// https://core.telegram.org/bots/api#passportelementerrorfile
+// PassportElementErrorFile (https://core.telegram.org/bots/api#passportelementerrorfile)
+//
+// Represents an issue with a document scan. The error is considered resolved when the file with the document scan changes.
 type PassportElementErrorFile struct {
 	// The section of the user's Telegram Passport which has the issue, one of "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration"
 	Type string `json:"type"`
@@ -3813,8 +4416,9 @@ func (v PassportElementErrorFile) MarshalJSON() ([]byte, error) {
 // PassportElementErrorFile.passportElementError is a dummy method to avoid interface implementation.
 func (v PassportElementErrorFile) passportElementError() {}
 
-// PassportElementErrorFiles Represents an issue with a list of scans. The error is considered resolved when the list of files containing the scans changes.
-// https://core.telegram.org/bots/api#passportelementerrorfiles
+// PassportElementErrorFiles (https://core.telegram.org/bots/api#passportelementerrorfiles)
+//
+// Represents an issue with a list of scans. The error is considered resolved when the list of files containing the scans changes.
 type PassportElementErrorFiles struct {
 	// The section of the user's Telegram Passport which has the issue, one of "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration"
 	Type string `json:"type"`
@@ -3865,8 +4469,9 @@ func (v PassportElementErrorFiles) MarshalJSON() ([]byte, error) {
 // PassportElementErrorFiles.passportElementError is a dummy method to avoid interface implementation.
 func (v PassportElementErrorFiles) passportElementError() {}
 
-// PassportElementErrorFrontSide Represents an issue with the front side of a document. The error is considered resolved when the file with the front side of the document changes.
-// https://core.telegram.org/bots/api#passportelementerrorfrontside
+// PassportElementErrorFrontSide (https://core.telegram.org/bots/api#passportelementerrorfrontside)
+//
+// Represents an issue with the front side of a document. The error is considered resolved when the file with the front side of the document changes.
 type PassportElementErrorFrontSide struct {
 	// The section of the user's Telegram Passport which has the issue, one of "passport", "driver_license", "identity_card", "internal_passport"
 	Type string `json:"type"`
@@ -3917,8 +4522,9 @@ func (v PassportElementErrorFrontSide) MarshalJSON() ([]byte, error) {
 // PassportElementErrorFrontSide.passportElementError is a dummy method to avoid interface implementation.
 func (v PassportElementErrorFrontSide) passportElementError() {}
 
-// PassportElementErrorReverseSide Represents an issue with the reverse side of a document. The error is considered resolved when the file with reverse side of the document changes.
-// https://core.telegram.org/bots/api#passportelementerrorreverseside
+// PassportElementErrorReverseSide (https://core.telegram.org/bots/api#passportelementerrorreverseside)
+//
+// Represents an issue with the reverse side of a document. The error is considered resolved when the file with reverse side of the document changes.
 type PassportElementErrorReverseSide struct {
 	// The section of the user's Telegram Passport which has the issue, one of "driver_license", "identity_card"
 	Type string `json:"type"`
@@ -3969,8 +4575,9 @@ func (v PassportElementErrorReverseSide) MarshalJSON() ([]byte, error) {
 // PassportElementErrorReverseSide.passportElementError is a dummy method to avoid interface implementation.
 func (v PassportElementErrorReverseSide) passportElementError() {}
 
-// PassportElementErrorSelfie Represents an issue with the selfie with a document. The error is considered resolved when the file with the selfie changes.
-// https://core.telegram.org/bots/api#passportelementerrorselfie
+// PassportElementErrorSelfie (https://core.telegram.org/bots/api#passportelementerrorselfie)
+//
+// Represents an issue with the selfie with a document. The error is considered resolved when the file with the selfie changes.
 type PassportElementErrorSelfie struct {
 	// The section of the user's Telegram Passport which has the issue, one of "passport", "driver_license", "identity_card", "internal_passport"
 	Type string `json:"type"`
@@ -4021,8 +4628,9 @@ func (v PassportElementErrorSelfie) MarshalJSON() ([]byte, error) {
 // PassportElementErrorSelfie.passportElementError is a dummy method to avoid interface implementation.
 func (v PassportElementErrorSelfie) passportElementError() {}
 
-// PassportElementErrorTranslationFile Represents an issue with one of the files that constitute the translation of a document. The error is considered resolved when the file changes.
-// https://core.telegram.org/bots/api#passportelementerrortranslationfile
+// PassportElementErrorTranslationFile (https://core.telegram.org/bots/api#passportelementerrortranslationfile)
+//
+// Represents an issue with one of the files that constitute the translation of a document. The error is considered resolved when the file changes.
 type PassportElementErrorTranslationFile struct {
 	// Type of element of the user's Telegram Passport which has the issue, one of "passport", "driver_license", "identity_card", "internal_passport", "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration"
 	Type string `json:"type"`
@@ -4073,8 +4681,9 @@ func (v PassportElementErrorTranslationFile) MarshalJSON() ([]byte, error) {
 // PassportElementErrorTranslationFile.passportElementError is a dummy method to avoid interface implementation.
 func (v PassportElementErrorTranslationFile) passportElementError() {}
 
-// PassportElementErrorTranslationFiles Represents an issue with the translated version of a document. The error is considered resolved when a file with the document translation change.
-// https://core.telegram.org/bots/api#passportelementerrortranslationfiles
+// PassportElementErrorTranslationFiles (https://core.telegram.org/bots/api#passportelementerrortranslationfiles)
+//
+// Represents an issue with the translated version of a document. The error is considered resolved when a file with the document translation change.
 type PassportElementErrorTranslationFiles struct {
 	// Type of element of the user's Telegram Passport which has the issue, one of "passport", "driver_license", "identity_card", "internal_passport", "utility_bill", "bank_statement", "rental_agreement", "passport_registration", "temporary_registration"
 	Type string `json:"type"`
@@ -4125,8 +4734,9 @@ func (v PassportElementErrorTranslationFiles) MarshalJSON() ([]byte, error) {
 // PassportElementErrorTranslationFiles.passportElementError is a dummy method to avoid interface implementation.
 func (v PassportElementErrorTranslationFiles) passportElementError() {}
 
-// PassportElementErrorUnspecified Represents an issue in an unspecified place. The error is considered resolved when new data is added.
-// https://core.telegram.org/bots/api#passportelementerrorunspecified
+// PassportElementErrorUnspecified (https://core.telegram.org/bots/api#passportelementerrorunspecified)
+//
+// Represents an issue in an unspecified place. The error is considered resolved when new data is added.
 type PassportElementErrorUnspecified struct {
 	// Type of element of the user's Telegram Passport which has the issue
 	Type string `json:"type"`
@@ -4177,8 +4787,9 @@ func (v PassportElementErrorUnspecified) MarshalJSON() ([]byte, error) {
 // PassportElementErrorUnspecified.passportElementError is a dummy method to avoid interface implementation.
 func (v PassportElementErrorUnspecified) passportElementError() {}
 
-// PassportFile This object represents a file uploaded to Telegram Passport. Currently all Telegram Passport files are in JPEG format when decrypted and don't exceed 10MB.
-// https://core.telegram.org/bots/api#passportfile
+// PassportFile (https://core.telegram.org/bots/api#passportfile)
+//
+// This object represents a file uploaded to Telegram Passport. Currently all Telegram Passport files are in JPEG format when decrypted and don't exceed 10MB.
 type PassportFile struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
@@ -4190,8 +4801,9 @@ type PassportFile struct {
 	FileDate int64 `json:"file_date"`
 }
 
-// PhotoSize This object represents one size of a photo or a file / sticker thumbnail.
-// https://core.telegram.org/bots/api#photosize
+// PhotoSize (https://core.telegram.org/bots/api#photosize)
+//
+// This object represents one size of a photo or a file / sticker thumbnail.
 type PhotoSize struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
@@ -4205,8 +4817,9 @@ type PhotoSize struct {
 	FileSize int64 `json:"file_size,omitempty"`
 }
 
-// Poll This object contains information about a poll.
-// https://core.telegram.org/bots/api#poll
+// Poll (https://core.telegram.org/bots/api#poll)
+//
+// This object contains information about a poll.
 type Poll struct {
 	// Unique poll identifier
 	Id string `json:"id"`
@@ -4236,8 +4849,9 @@ type Poll struct {
 	CloseDate int64 `json:"close_date,omitempty"`
 }
 
-// PollAnswer This object represents an answer of a user in a non-anonymous poll.
-// https://core.telegram.org/bots/api#pollanswer
+// PollAnswer (https://core.telegram.org/bots/api#pollanswer)
+//
+// This object represents an answer of a user in a non-anonymous poll.
 type PollAnswer struct {
 	// Unique poll identifier
 	PollId string `json:"poll_id"`
@@ -4247,8 +4861,9 @@ type PollAnswer struct {
 	OptionIds []int64 `json:"option_ids,omitempty"`
 }
 
-// PollOption This object contains information about one answer option in a poll.
-// https://core.telegram.org/bots/api#polloption
+// PollOption (https://core.telegram.org/bots/api#polloption)
+//
+// This object contains information about one answer option in a poll.
 type PollOption struct {
 	// Option text, 1-100 characters
 	Text string `json:"text"`
@@ -4256,8 +4871,9 @@ type PollOption struct {
 	VoterCount int64 `json:"voter_count"`
 }
 
-// PreCheckoutQuery This object contains information about an incoming pre-checkout query.
-// https://core.telegram.org/bots/api#precheckoutquery
+// PreCheckoutQuery (https://core.telegram.org/bots/api#precheckoutquery)
+//
+// This object contains information about an incoming pre-checkout query.
 type PreCheckoutQuery struct {
 	// Unique query identifier
 	Id string `json:"id"`
@@ -4271,12 +4887,13 @@ type PreCheckoutQuery struct {
 	InvoicePayload string `json:"invoice_payload"`
 	// Optional. Identifier of the shipping option chosen by the user
 	ShippingOptionId string `json:"shipping_option_id,omitempty"`
-	// Optional. Order info provided by the user
+	// Optional. Order information provided by the user
 	OrderInfo *OrderInfo `json:"order_info,omitempty"`
 }
 
-// ProximityAlertTriggered This object represents the content of a service message, sent whenever a user in the chat triggers a proximity alert set by another user.
-// https://core.telegram.org/bots/api#proximityalerttriggered
+// ProximityAlertTriggered (https://core.telegram.org/bots/api#proximityalerttriggered)
+//
+// This object represents the content of a service message, sent whenever a user in the chat triggers a proximity alert set by another user.
 type ProximityAlertTriggered struct {
 	// User that triggered the alert
 	Traveler User `json:"traveler"`
@@ -4286,11 +4903,14 @@ type ProximityAlertTriggered struct {
 	Distance int64 `json:"distance"`
 }
 
-// ReplyKeyboardMarkup This object represents a custom keyboard with reply options (see Introduction to bots for details and examples).
-// https://core.telegram.org/bots/api#replykeyboardmarkup
+// ReplyKeyboardMarkup (https://core.telegram.org/bots/api#replykeyboardmarkup)
+//
+// This object represents a custom keyboard with reply options (see Introduction to bots for details and examples).
 type ReplyKeyboardMarkup struct {
 	// Array of button rows, each represented by an Array of KeyboardButton objects
 	Keyboard [][]KeyboardButton `json:"keyboard,omitempty"`
+	// Optional. Requests clients to always show the keyboard when the regular keyboard is hidden. Defaults to false, in which case the custom keyboard can be hidden and opened with a keyboard icon.
+	IsPersistent bool `json:"is_persistent,omitempty"`
 	// Optional. Requests clients to resize the keyboard vertically for optimal fit (e.g., make the keyboard smaller if there are just two rows of buttons). Defaults to false, in which case the custom keyboard is always of the same height as the app's standard keyboard.
 	ResizeKeyboard bool `json:"resize_keyboard,omitempty"`
 	// Optional. Requests clients to hide the keyboard as soon as it's been used. The keyboard will still be available, but clients will automatically display the usual letter-keyboard in the chat - the user can press a special button in the input field to see the custom keyboard again. Defaults to false.
@@ -4304,8 +4924,9 @@ type ReplyKeyboardMarkup struct {
 // ReplyKeyboardMarkup.replyMarkup is a dummy method to avoid interface implementation.
 func (v ReplyKeyboardMarkup) replyMarkup() {}
 
-// ReplyKeyboardRemove Upon receiving a message with this object, Telegram clients will remove the current custom keyboard and display the default letter-keyboard. By default, custom keyboards are displayed until a new keyboard is sent by a bot. An exception is made for one-time keyboards that are hidden immediately after the user presses a button (see ReplyKeyboardMarkup).
-// https://core.telegram.org/bots/api#replykeyboardremove
+// ReplyKeyboardRemove (https://core.telegram.org/bots/api#replykeyboardremove)
+//
+// Upon receiving a message with this object, Telegram clients will remove the current custom keyboard and display the default letter-keyboard. By default, custom keyboards are displayed until a new keyboard is sent by a bot. An exception is made for one-time keyboards that are hidden immediately after the user presses a button (see ReplyKeyboardMarkup).
 type ReplyKeyboardRemove struct {
 	// Requests clients to remove the custom keyboard (user will not be able to summon this keyboard; if you want to hide the keyboard from sight but keep it accessible, use one_time_keyboard in ReplyKeyboardMarkup)
 	RemoveKeyboard bool `json:"remove_keyboard"`
@@ -4316,8 +4937,9 @@ type ReplyKeyboardRemove struct {
 // ReplyKeyboardRemove.replyMarkup is a dummy method to avoid interface implementation.
 func (v ReplyKeyboardRemove) replyMarkup() {}
 
-// ResponseParameters Contains information about why a request was unsuccessful.
-// https://core.telegram.org/bots/api#responseparameters
+// ResponseParameters (https://core.telegram.org/bots/api#responseparameters)
+//
+// Describes why a request was unsuccessful.
 type ResponseParameters struct {
 	// Optional. The group has been migrated to a supergroup with the specified identifier. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this identifier.
 	MigrateToChatId int64 `json:"migrate_to_chat_id,omitempty"`
@@ -4325,10 +4947,19 @@ type ResponseParameters struct {
 	RetryAfter int64 `json:"retry_after,omitempty"`
 }
 
-// ShippingAddress This object represents a shipping address.
-// https://core.telegram.org/bots/api#shippingaddress
+// SentWebAppMessage (https://core.telegram.org/bots/api#sentwebappmessage)
+//
+// Describes an inline message sent by a Web App on behalf of a user.
+type SentWebAppMessage struct {
+	// Optional. Identifier of the sent inline message. Available only if there is an inline keyboard attached to the message.
+	InlineMessageId string `json:"inline_message_id,omitempty"`
+}
+
+// ShippingAddress (https://core.telegram.org/bots/api#shippingaddress)
+//
+// This object represents a shipping address.
 type ShippingAddress struct {
-	// ISO 3166-1 alpha-2 country code
+	// Two-letter ISO 3166-1 alpha-2 country code
 	CountryCode string `json:"country_code"`
 	// State, if applicable
 	State string `json:"state"`
@@ -4342,8 +4973,9 @@ type ShippingAddress struct {
 	PostCode string `json:"post_code"`
 }
 
-// ShippingOption This object represents one shipping option.
-// https://core.telegram.org/bots/api#shippingoption
+// ShippingOption (https://core.telegram.org/bots/api#shippingoption)
+//
+// This object represents one shipping option.
 type ShippingOption struct {
 	// Shipping option identifier
 	Id string `json:"id"`
@@ -4353,8 +4985,9 @@ type ShippingOption struct {
 	Prices []LabeledPrice `json:"prices,omitempty"`
 }
 
-// ShippingQuery This object contains information about an incoming shipping query.
-// https://core.telegram.org/bots/api#shippingquery
+// ShippingQuery (https://core.telegram.org/bots/api#shippingquery)
+//
+// This object contains information about an incoming shipping query.
 type ShippingQuery struct {
 	// Unique query identifier
 	Id string `json:"id"`
@@ -4366,50 +4999,65 @@ type ShippingQuery struct {
 	ShippingAddress ShippingAddress `json:"shipping_address"`
 }
 
-// Sticker This object represents a sticker.
-// https://core.telegram.org/bots/api#sticker
+// Sticker (https://core.telegram.org/bots/api#sticker)
+//
+// This object represents a sticker.
 type Sticker struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
 	// Unique identifier for this file, which is supposed to be the same over time and for different bots. Can't be used to download or reuse the file.
 	FileUniqueId string `json:"file_unique_id"`
+	// Type of the sticker, currently one of "regular", "mask", "custom_emoji". The type of the sticker is independent from its format, which is determined by the fields is_animated and is_video.
+	Type string `json:"type"`
 	// Sticker width
 	Width int64 `json:"width"`
 	// Sticker height
 	Height int64 `json:"height"`
 	// True, if the sticker is animated
 	IsAnimated bool `json:"is_animated"`
+	// True, if the sticker is a video sticker
+	IsVideo bool `json:"is_video"`
 	// Optional. Sticker thumbnail in the .WEBP or .JPG format
-	Thumb *PhotoSize `json:"thumb,omitempty"`
+	Thumbnail *PhotoSize `json:"thumbnail,omitempty"`
 	// Optional. Emoji associated with the sticker
 	Emoji string `json:"emoji,omitempty"`
 	// Optional. Name of the sticker set to which the sticker belongs
 	SetName string `json:"set_name,omitempty"`
+	// Optional. For premium regular stickers, premium animation for the sticker
+	PremiumAnimation *File `json:"premium_animation,omitempty"`
 	// Optional. For mask stickers, the position where the mask should be placed
 	MaskPosition *MaskPosition `json:"mask_position,omitempty"`
+	// Optional. For custom emoji stickers, unique identifier of the custom emoji
+	CustomEmojiId string `json:"custom_emoji_id,omitempty"`
+	// Optional. True, if the sticker must be repainted to a text color in messages, the color of the Telegram Premium badge in emoji status, white color on chat photos, or another appropriate color in other places
+	NeedsRepainting bool `json:"needs_repainting,omitempty"`
 	// Optional. File size in bytes
 	FileSize int64 `json:"file_size,omitempty"`
 }
 
-// StickerSet This object represents a sticker set.
-// https://core.telegram.org/bots/api#stickerset
+// StickerSet (https://core.telegram.org/bots/api#stickerset)
+//
+// This object represents a sticker set.
 type StickerSet struct {
 	// Sticker set name
 	Name string `json:"name"`
 	// Sticker set title
 	Title string `json:"title"`
+	// Type of stickers in the set, currently one of "regular", "mask", "custom_emoji"
+	StickerType string `json:"sticker_type"`
 	// True, if the sticker set contains animated stickers
 	IsAnimated bool `json:"is_animated"`
-	// True, if the sticker set contains masks
-	ContainsMasks bool `json:"contains_masks"`
+	// True, if the sticker set contains video stickers
+	IsVideo bool `json:"is_video"`
 	// List of all set stickers
 	Stickers []Sticker `json:"stickers,omitempty"`
-	// Optional. Sticker set thumbnail in the .WEBP or .TGS format
-	Thumb *PhotoSize `json:"thumb,omitempty"`
+	// Optional. Sticker set thumbnail in the .WEBP, .TGS, or .WEBM format
+	Thumbnail *PhotoSize `json:"thumbnail,omitempty"`
 }
 
-// SuccessfulPayment This object contains basic information about a successful payment.
-// https://core.telegram.org/bots/api#successfulpayment
+// SuccessfulPayment (https://core.telegram.org/bots/api#successfulpayment)
+//
+// This object contains basic information about a successful payment.
 type SuccessfulPayment struct {
 	// Three-letter ISO 4217 currency code
 	Currency string `json:"currency"`
@@ -4419,7 +5067,7 @@ type SuccessfulPayment struct {
 	InvoicePayload string `json:"invoice_payload"`
 	// Optional. Identifier of the shipping option chosen by the user
 	ShippingOptionId string `json:"shipping_option_id,omitempty"`
-	// Optional. Order info provided by the user
+	// Optional. Order information provided by the user
 	OrderInfo *OrderInfo `json:"order_info,omitempty"`
 	// Telegram payment identifier
 	TelegramPaymentChargeId string `json:"telegram_payment_charge_id"`
@@ -4427,10 +5075,12 @@ type SuccessfulPayment struct {
 	ProviderPaymentChargeId string `json:"provider_payment_charge_id"`
 }
 
-// Update This object represents an incoming update.At most one of the optional parameters can be present in any given update.
-// https://core.telegram.org/bots/api#update
+// Update (https://core.telegram.org/bots/api#update)
+//
+// This object represents an incoming update.
+// At most one of the optional parameters can be present in any given update.
 type Update struct {
-	// The update's unique identifier. Update identifiers start from a certain positive number and increase sequentially. This ID becomes especially handy if you're using Webhooks, since it allows you to ignore repeated updates or to restore the correct update sequence, should they get out of order. If there are no new updates for at least a week, then identifier of the next update will be chosen randomly instead of sequentially.
+	// The update's unique identifier. Update identifiers start from a certain positive number and increase sequentially. This ID becomes especially handy if you're using webhooks, since it allows you to ignore repeated updates or to restore the correct update sequence, should they get out of order. If there are no new updates for at least a week, then identifier of the next update will be chosen randomly instead of sequentially.
 	UpdateId int64 `json:"update_id"`
 	// Optional. New incoming message of any kind - text, photo, sticker, etc.
 	Message *Message `json:"message,omitempty"`
@@ -4462,8 +5112,9 @@ type Update struct {
 	ChatJoinRequest *ChatJoinRequest `json:"chat_join_request,omitempty"`
 }
 
-// User This object represents a Telegram user or bot.
-// https://core.telegram.org/bots/api#user
+// User (https://core.telegram.org/bots/api#user)
+//
+// This object represents a Telegram user or bot.
 type User struct {
 	// Unique identifier for this user or bot. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a 64-bit integer or double-precision float type are safe for storing this identifier.
 	Id int64 `json:"id"`
@@ -4477,6 +5128,10 @@ type User struct {
 	Username string `json:"username,omitempty"`
 	// Optional. IETF language tag of the user's language
 	LanguageCode string `json:"language_code,omitempty"`
+	// Optional. True, if this user is a Telegram Premium user
+	IsPremium bool `json:"is_premium,omitempty"`
+	// Optional. True, if this user added the bot to the attachment menu
+	AddedToAttachmentMenu bool `json:"added_to_attachment_menu,omitempty"`
 	// Optional. True, if the bot can be invited to groups. Returned only in getMe.
 	CanJoinGroups bool `json:"can_join_groups,omitempty"`
 	// Optional. True, if privacy mode is disabled for the bot. Returned only in getMe.
@@ -4485,8 +5140,9 @@ type User struct {
 	SupportsInlineQueries bool `json:"supports_inline_queries,omitempty"`
 }
 
-// UserProfilePhotos This object represent a user's profile pictures.
-// https://core.telegram.org/bots/api#userprofilephotos
+// UserProfilePhotos (https://core.telegram.org/bots/api#userprofilephotos)
+//
+// This object represent a user's profile pictures.
 type UserProfilePhotos struct {
 	// Total number of profile pictures the target user has
 	TotalCount int64 `json:"total_count"`
@@ -4494,8 +5150,19 @@ type UserProfilePhotos struct {
 	Photos [][]PhotoSize `json:"photos,omitempty"`
 }
 
-// Venue This object represents a venue.
-// https://core.telegram.org/bots/api#venue
+// UserShared (https://core.telegram.org/bots/api#usershared)
+//
+// This object contains information about the user whose identifier was shared with the bot using a KeyboardButtonRequestUser button.
+type UserShared struct {
+	// Identifier of the request
+	RequestId int64 `json:"request_id"`
+	// Identifier of the shared user. This number may have more than 32 significant bits and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a 64-bit integer or double-precision float type are safe for storing this identifier. The bot may not have access to the user and could be unable to use this identifier, unless the user is already known to the bot by some other means.
+	UserId int64 `json:"user_id"`
+}
+
+// Venue (https://core.telegram.org/bots/api#venue)
+//
+// This object represents a venue.
 type Venue struct {
 	// Venue location. Can't be a live location
 	Location Location `json:"location"`
@@ -4513,8 +5180,9 @@ type Venue struct {
 	GooglePlaceType string `json:"google_place_type,omitempty"`
 }
 
-// Video This object represents a video file.
-// https://core.telegram.org/bots/api#video
+// Video (https://core.telegram.org/bots/api#video)
+//
+// This object represents a video file.
 type Video struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
@@ -4527,17 +5195,47 @@ type Video struct {
 	// Duration of the video in seconds as defined by sender
 	Duration int64 `json:"duration"`
 	// Optional. Video thumbnail
-	Thumb *PhotoSize `json:"thumb,omitempty"`
+	Thumbnail *PhotoSize `json:"thumbnail,omitempty"`
 	// Optional. Original filename as defined by sender
 	FileName string `json:"file_name,omitempty"`
-	// Optional. Mime type of a file as defined by sender
+	// Optional. MIME type of the file as defined by sender
 	MimeType string `json:"mime_type,omitempty"`
-	// Optional. File size in bytes
+	// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
 	FileSize int64 `json:"file_size,omitempty"`
 }
 
-// VideoNote This object represents a video message (available in Telegram apps as of v.4.0).
-// https://core.telegram.org/bots/api#videonote
+// VideoChatEnded (https://core.telegram.org/bots/api#videochatended)
+//
+// This object represents a service message about a video chat ended in the chat.
+type VideoChatEnded struct {
+	// Video chat duration in seconds
+	Duration int64 `json:"duration"`
+}
+
+// VideoChatParticipantsInvited (https://core.telegram.org/bots/api#videochatparticipantsinvited)
+//
+// This object represents a service message about new members invited to a video chat.
+type VideoChatParticipantsInvited struct {
+	// New members that were invited to the video chat
+	Users []User `json:"users,omitempty"`
+}
+
+// VideoChatScheduled (https://core.telegram.org/bots/api#videochatscheduled)
+//
+// This object represents a service message about a video chat scheduled in the chat.
+type VideoChatScheduled struct {
+	// Point in time (Unix timestamp) when the video chat is supposed to be started by a chat administrator
+	StartDate int64 `json:"start_date"`
+}
+
+// VideoChatStarted (https://core.telegram.org/bots/api#videochatstarted)
+//
+// This object represents a service message about a video chat started in the chat. Currently holds no information.
+type VideoChatStarted struct{}
+
+// VideoNote (https://core.telegram.org/bots/api#videonote)
+//
+// This object represents a video message (available in Telegram apps as of v.4.0).
 type VideoNote struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
@@ -4548,13 +5246,14 @@ type VideoNote struct {
 	// Duration of the video in seconds as defined by sender
 	Duration int64 `json:"duration"`
 	// Optional. Video thumbnail
-	Thumb *PhotoSize `json:"thumb,omitempty"`
+	Thumbnail *PhotoSize `json:"thumbnail,omitempty"`
 	// Optional. File size in bytes
 	FileSize int64 `json:"file_size,omitempty"`
 }
 
-// Voice This object represents a voice note.
-// https://core.telegram.org/bots/api#voice
+// Voice (https://core.telegram.org/bots/api#voice)
+//
+// This object represents a voice note.
 type Voice struct {
 	// Identifier for this file, which can be used to download or reuse the file
 	FileId string `json:"file_id"`
@@ -4564,37 +5263,31 @@ type Voice struct {
 	Duration int64 `json:"duration"`
 	// Optional. MIME type of the file as defined by sender
 	MimeType string `json:"mime_type,omitempty"`
-	// Optional. File size in bytes
+	// Optional. File size in bytes. It can be bigger than 2^31 and some programming languages may have difficulty/silent defects in interpreting it. But it has at most 52 significant bits, so a signed 64-bit integer or double-precision float type are safe for storing this value.
 	FileSize int64 `json:"file_size,omitempty"`
 }
 
-// VoiceChatEnded This object represents a service message about a voice chat ended in the chat.
-// https://core.telegram.org/bots/api#voicechatended
-type VoiceChatEnded struct {
-	// Voice chat duration in seconds
-	Duration int64 `json:"duration"`
+// WebAppData (https://core.telegram.org/bots/api#webappdata)
+//
+// Describes data sent from a Web App to the bot.
+type WebAppData struct {
+	// The data. Be aware that a bad client can send arbitrary data in this field.
+	Data string `json:"data"`
+	// Text of the web_app keyboard button from which the Web App was opened. Be aware that a bad client can send arbitrary data in this field.
+	ButtonText string `json:"button_text"`
 }
 
-// VoiceChatParticipantsInvited This object represents a service message about new members invited to a voice chat.
-// https://core.telegram.org/bots/api#voicechatparticipantsinvited
-type VoiceChatParticipantsInvited struct {
-	// Optional. New members that were invited to the voice chat
-	Users []User `json:"users,omitempty"`
+// WebAppInfo (https://core.telegram.org/bots/api#webappinfo)
+//
+// Describes a Web App.
+type WebAppInfo struct {
+	// An HTTPS URL of a Web App to be opened with additional data as specified in Initializing Web Apps
+	Url string `json:"url"`
 }
 
-// VoiceChatScheduled This object represents a service message about a voice chat scheduled in the chat.
-// https://core.telegram.org/bots/api#voicechatscheduled
-type VoiceChatScheduled struct {
-	// Point in time (Unix timestamp) when the voice chat is supposed to be started by a chat administrator
-	StartDate int64 `json:"start_date"`
-}
-
-// VoiceChatStarted This object represents a service message about a voice chat started in the chat. Currently holds no information.
-// https://core.telegram.org/bots/api#voicechatstarted
-type VoiceChatStarted struct{}
-
-// WebhookInfo Contains information about the current status of a webhook.
-// https://core.telegram.org/bots/api#webhookinfo
+// WebhookInfo (https://core.telegram.org/bots/api#webhookinfo)
+//
+// Describes the current status of a webhook.
 type WebhookInfo struct {
 	// Webhook URL, may be empty if webhook is not set up
 	Url string `json:"url"`
@@ -4608,8 +5301,15 @@ type WebhookInfo struct {
 	LastErrorDate int64 `json:"last_error_date,omitempty"`
 	// Optional. Error message in human-readable format for the most recent error that happened when trying to deliver an update via webhook
 	LastErrorMessage string `json:"last_error_message,omitempty"`
-	// Optional. Maximum allowed number of simultaneous HTTPS connections to the webhook for update delivery
+	// Optional. Unix time of the most recent error that happened when trying to synchronize available updates with Telegram datacenters
+	LastSynchronizationErrorDate int64 `json:"last_synchronization_error_date,omitempty"`
+	// Optional. The maximum allowed number of simultaneous HTTPS connections to the webhook for update delivery
 	MaxConnections int64 `json:"max_connections,omitempty"`
 	// Optional. A list of update types the bot is subscribed to. Defaults to all update types except chat_member
 	AllowedUpdates []string `json:"allowed_updates,omitempty"`
 }
+
+// WriteAccessAllowed (https://core.telegram.org/bots/api#writeaccessallowed)
+//
+// This object represents a service message about a user allowing a bot added to the attachment menu to write messages. Currently holds no information.
+type WriteAccessAllowed struct{}

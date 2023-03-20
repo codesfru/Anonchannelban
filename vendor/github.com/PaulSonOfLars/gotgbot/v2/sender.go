@@ -3,10 +3,18 @@ package gotgbot
 // Sender is a merge of the User and SenderChat fields of a message, to provide easier interaction with
 // message senders from the telegram API.
 type Sender struct {
-	User               *User
-	Chat               *Chat
+	// The User defined as the sender (if applicable)
+	User *User
+	// The Chat defined as the sender (if applicable)
+	Chat *Chat
+	// Whether the sender was an automatic forward; eg, a linked channel.
 	IsAutomaticForward bool
-	ChatId             int64
+	// The location that was sent to. Required to determine if the sender is a linked channel, an anonymous channel,
+	// or an anonymous admin.
+	ChatId int64
+	// The custom admin title of the anonymous group administrator sender.
+	// Only available if IsAnonymousAdmin is true.
+	AuthorSignature string
 }
 
 // GetSender populates the relevant fields of a Sender struct given a message.
@@ -16,6 +24,7 @@ func (m Message) GetSender() *Sender {
 		Chat:               m.SenderChat,
 		IsAutomaticForward: m.IsAutomaticForward,
 		ChatId:             m.Chat.Id,
+		AuthorSignature:    m.AuthorSignature,
 	}
 }
 
@@ -45,8 +54,8 @@ func (s Sender) Username() string {
 
 // Name determines the name of the sender.
 // This is:
-// - Chat.Title for a Chat.
-// - User.FirstName + User.LastName for a User (the full name).
+//   - Chat.Title for a Chat.
+//   - User.FirstName + User.LastName for a User (the full name).
 func (s Sender) Name() string {
 	if s.Chat != nil {
 		return s.Chat.Title
@@ -62,8 +71,8 @@ func (s Sender) Name() string {
 
 // FirstName determines the firstname of the sender.
 // This is:
-// - Chat.Title for a Chat.
-// - User.FirstName for a User.
+//   - Chat.Title for a Chat.
+//   - User.FirstName for a User.
 func (s Sender) FirstName() string {
 	if s.Chat != nil {
 		return s.Chat.Title
@@ -76,8 +85,8 @@ func (s Sender) FirstName() string {
 
 // LastName determines the firstname of the sender.
 // This is:
-// - empty for a Chat.
-// - User.LastName for a User.
+//   - empty for a Chat.
+//   - User.LastName for a User.
 func (s Sender) LastName() string {
 	if s.Chat != nil {
 		return "" // empty; we define the "title" as being a firstname, so there is no lastname.

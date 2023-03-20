@@ -24,31 +24,22 @@ func NewMessage(f filters.Message, r Response) Message {
 	}
 }
 
-func (m Message) CheckUpdate(b *gotgbot.Bot, u *gotgbot.Update) bool {
-	if u.Message != nil {
-		return m.Filter == nil || m.Filter(u.Message)
+func (m Message) CheckUpdate(b *gotgbot.Bot, ctx *ext.Context) bool {
+	if ctx.Message != nil {
+		return m.Filter == nil || m.Filter(ctx.Message)
 	}
 
-	// if no edits and message is edited
-	if m.AllowEdited && u.EditedMessage != nil {
-		if u.EditedMessage.Text == "" && u.EditedMessage.Caption == "" {
-			return false
-		}
-		return m.Filter == nil || m.Filter(u.EditedMessage)
+	// If edits are allowed, and message is edited.
+	if m.AllowEdited && ctx.EditedMessage != nil {
+		return m.Filter == nil || m.Filter(ctx.EditedMessage)
 	}
-	// if no channel and message is channel message
-	if m.AllowChannel && u.ChannelPost != nil {
-		if u.ChannelPost.Text == "" && u.ChannelPost.Caption == "" {
-			return false
-		}
-		return m.Filter == nil || m.Filter(u.ChannelPost)
+	// If channel posts are allowed, and message is channel post.
+	if m.AllowChannel && ctx.ChannelPost != nil {
+		return m.Filter == nil || m.Filter(ctx.ChannelPost)
 	}
-	// if no channel, no edits, and post is edited
-	if m.AllowChannel && m.AllowEdited && u.EditedChannelPost != nil {
-		if u.EditedChannelPost.Text == "" && u.EditedChannelPost.Caption == "" {
-			return false
-		}
-		return m.Filter == nil || m.Filter(u.EditedChannelPost)
+	// If channel posts and edits are allowed, and post is edited.
+	if m.AllowChannel && m.AllowEdited && ctx.EditedChannelPost != nil {
+		return m.Filter == nil || m.Filter(ctx.EditedChannelPost)
 	}
 
 	return false
